@@ -1,0 +1,203 @@
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Theme - New Color Palette */
+    /* First: #b6e1e0 (light teal) */
+    /* Second: #9cd3d3 (medium teal) */
+    /* Third: #e8630a (orange) */
+    /* Fourth: #2b4353 (dark blue-gray) */
+    
+    --background: 180 30% 90%; /* Light teal background */
+    --foreground: 210 40% 15%; /* Dark text */
+
+    --card: 180 25% 95%; /* Very light teal */
+    --card-foreground: 210 40% 15%;
+
+    --popover: 180 25% 95%;
+    --popover-foreground: 210 40% 15%;
+
+    /* Primary: Third color #e8630a (orange) */
+    --primary: 18 92% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Second color #9cd3d3 (medium teal) */
+    --secondary: 180 35% 70%;
+    --secondary-foreground: 210 40% 15%;
+
+    /* Muted: First color #b6e1e0 (light teal) */
+    --muted: 180 30% 80%;
+    --muted-foreground: 210 30% 40%;
+
+    /* Accent: Third color #e8630a (orange) */
+    --accent: 18 92% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders */
+    --border: 180 20% 75%;
+    --input: 180 25% 85%;
+    --ring: 18 92% 48%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 180 30% 92%;
+    --sidebar-foreground: 210 40% 15%;
+    --sidebar-primary: 18 92% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 35% 70%;
+    --sidebar-accent-foreground: 210 40% 15%;
+    --sidebar-border: 180 20% 75%;
+    --sidebar-ring: 18 92% 48%;
+  }
+
+  .dark {
+    /* Dark Theme - New Color Palette */
+    --background: 210 35% 12%; /* Fourth color #2b4353 (dark blue-gray) */
+    --foreground: 180 30% 90%; /* Light teal text */
+
+    --card: 210 35% 15%; /* Slightly lighter dark */
+    --card-foreground: 180 30% 90%;
+
+    --popover: 210 35% 15%;
+    --popover-foreground: 180 30% 90%;
+
+    /* Primary: Third color #e8630a (orange) */
+    --primary: 18 92% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Second color #9cd3d3 (medium teal) - darker for dark mode */
+    --secondary: 180 35% 25%;
+    --secondary-foreground: 180 30% 90%;
+
+    /* Muted: First color #b6e1e0 (light teal) - darker for dark mode */
+    --muted: 180 30% 20%;
+    --muted-foreground: 180 25% 65%;
+
+    /* Accent: Third color #e8630a (orange) */
+    --accent: 18 92% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders */
+    --border: 180 20% 25%;
+    --input: 180 25% 20%;
+    --ring: 18 92% 48%;
+
+    /* Sidebar */
+    --sidebar-background: 210 35% 10%;
+    --sidebar-foreground: 180 30% 90%;
+    --sidebar-primary: 18 92% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 35% 25%;
+    --sidebar-accent-foreground: 180 30% 90%;
+    --sidebar-border: 180 20% 25%;
+    --sidebar-ring: 18 92% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    line-height: 1.3;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+  }
+  
+  h2 {
+    font-size: 2rem;
+    line-height: 1.3;
+  }
+  
+  h3 {
+    font-size: 1.5rem;
+    line-height: 1.4;
+  }
+
+  .font-mono {
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  /* Pulse animation for live connection indicators */
+  @keyframes pulse-icon {
+    0%, 100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .animate-pulse-icon {
+    animation: pulse-icon 2s ease-in-out infinite;
+  }
+}
+
+@layer utilities {
+  /* Solid panels - no blur, no transparency */
+  .glass {
+    @apply bg-card border;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-strong {
+    @apply bg-card border;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Number styling for credibility */
+  .stat-number {
+    @apply font-mono font-medium tracking-tight;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}

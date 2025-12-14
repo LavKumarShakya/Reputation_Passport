@@ -1,0 +1,27 @@
+{
+  "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb": {
+    "name": "Rahul Sharma",
+    "role": "Student",
+    "reputationScore": 847,
+    "email": "rahul@example.com",
+    "github": "rahulsharma",
+    "joinedAt": "2024-01-15"
+  },
+  "0x8ba1f109551bD432803012645Hac136c22C3c": {
+    "name": "Sarah Chen",
+    "role": "Software Engineer",
+    "reputationScore": 923,
+    "email": "sarah@example.com",
+    "github": "sarahchen",
+    "joinedAt": "2024-02-01"
+  },
+  "0x1234567890123456789012345678901234567890": {
+    "name": "Michael Rodriguez",
+    "role": "Product Manager",
+    "reputationScore": 756,
+    "email": "michael@example.com",
+    "github": "mrodriguez",
+    "joinedAt": "2024-01-20"
+  }
+}
+

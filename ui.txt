@@ -1,0 +1,63 @@
+# Current UI Implementation Status
+
+This document describes the current visual and functional state of the **Reputation Passport** application, based on the codebase analysis.
+
+## 1. Global Design System
+The application features a polished, "Trust-First" aesthetic designed to look futuristic yet professional.
+
+*   **Theme**: Dark Mode default.
+    *   **Background**: Deep charcoal/navy (`#0F1724`).
+    *   **Panels**: "Glassmorphism" style — translucent backgrounds with background blur (`backdrop-filter: blur()`), subtle white borders (`border-white/10`), and soft shadows.
+*   **Typography**:
+    *   **Headings**: *Space Grotesk* — Geometric, tech-focused sans-serif.
+    *   **Body**: *Inter* — Clean, standard UI font for readability.
+    *   **Data/Numbers**: *JetBrains Mono* — Monospace font used for scores, hashes, and stats to imply "engineering precision".
+*   **Color Palette**:
+    *   **Primary**: "Trust Blue" (Azure/Royal Blue gradients).
+    *   **Accent**: "Growth Green" (Emerald/Mint for success states and value).
+    *   **Gradients**: Used heavily in text (`.gradient-text`), buttons, and backgrounds.
+
+## 2. Key Pages & Sections
+
+### A. Landing Page (`/`)
+User's first point of entry. Designed to convert.
+
+*   **Navigation Bar**: Sticky "glass" header. Logo on left ("RP" shield), "Get Started" button on right.
+*   **Hero Section**:
+    *   **Left**: Large Value Proposition ("Your On-Chain Reputation Passport"). Three floating "pill" badges listing key benefits (Verifiable, Portable, Visual).
+    *   **Right**: **3D-like NFT Preview**. A large card that rotates with mouse movement (parallax effect). It features floating particles, a "Gold" tier badge, and a glowing reputation score.
+*   **Mini Demo Strip**: Three icons showing the workflow: "Verify GitHub" -> "Issue Certs" -> "Recruiter Verify".
+*   **Pricing Section**: Three cards (Student, Professional, Enterprise). The "Professional" card glows and has a "Most Popular" tag.
+*   **Footer**: Simple minimalist footer with copyright.
+
+### B. Onboarding Flow (`/onboarding`)
+A structured 5-step wizard to set up the profile.
+
+*   **Layout**: Two-column layout.
+    *   **Left sidebar**: Vertical progress stepper (Identity -> Connect -> Verify -> Visibility -> Preview). Completed steps light up.
+    *   **Right panel**: The active form area in a glass container.
+*   **Steps**:
+    1.  **Identity**: Input fields for Display Name, Handle, Email. Drag & Drop zone for Avatar.
+    2.  **Connect Sources**: Interactive toggles for GitHub, Google, Wallet. Expanding the GitHub toggle reveals a simulated "Contribution Graph" preview.
+    3.  **Verify Certificates**: Large drag & drop area to upload PDF/PNG certificates. Shows a trust icon ("Cryptographically hashed").
+    4.  **Visibility**: Toggles to set specific data points (Repos, Certs) to Public or Private.
+    5.  **Preview**: Final review. Shows the generated NFT Card. Clicking "Create Passport" triggers a "Hashing" animation sequence (Processing -> Confirming -> Success).
+
+### C. Profile Page (`/profile`)
+The main dashboard for a user.
+
+*   **Hero NFT Card**: The centerpiece. A high-fidelity detailed card component.
+    *   **Visuals**: Background gradient changes based on "Tier" (Bronze, Silver, Gold, Platinum, Diamond).
+    *   **Animations**: Continuous "breathing" scale animation. Floating particle effects inside the card.
+    *   **Interactions**: Buttons to Share, Mint (SBT), and Export. Clicking the card expands it into a detailed modal showing trait metadata (Glow Intensity, Badge Count).
+*   **Reputation Strip**: A horizontal row of "Pill" stats below the card. Shows numeric breakdown of Reputation Score, Verified Certs, and Endorsements.
+*   **Reputation Graph**:
+    *   **Visuals**: An interactive D3/SVG visualization.
+    *   **Nodes**: Differently colored circles representing Skills (Blue), Certs (Green), Projects (Purple), and Hackathons (Orange).
+    *   **Dynamics**: Nodes float in a force-directed layout. Hovering highlights connections.
+*   **Activity Timeline**: A vertical list of verified events. Each item shows a date, an icon, and a "Verified" tick mark.
+
+## 3. Micro-Interactions
+*   **Hover Effects**: Buttons scale up slightly (`scale-105`) and glow.
+*   **Page Transitions**: Smooth fade-in and slide-up effects (`framer-motion`) when navigating between pages.
+*   **Loaders**: Custom spinners and skeleton screens for data loading states.

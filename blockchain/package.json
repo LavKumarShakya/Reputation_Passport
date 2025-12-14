@@ -1,0 +1,19 @@
+{
+  "name": "reputation-passport-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Reputation Passport on-chain verification",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:amoy": "hardhat run deploy.js --network amoy",
+    "deploy:sepolia": "hardhat run deploy.js --network sepolia",
+    "deploy:local": "hardhat run deploy.js --network hardhat",
+    "test": "hardhat test",
+    "verify": "hardhat verify"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0",
+    "dotenv": "^16.3.1"
+  }
+}
+

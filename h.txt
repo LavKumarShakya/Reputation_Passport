@@ -1,0 +1,247 @@
+# High-level Design Language (Visual Brief)
+
+## Visual Goal
+**Polished, slightly futuristic, trust-first.**
+Think: clean geometry, soft glass panels, subtle gradients, crisp micro-animations (Framer Motion), and a data-forward aesthetic (clear hierarchy, legible numeric typography).
+
+## Color System
+-   **Neutral Base:** Charcoal `#0F1724` / Off-white `#F8FAFC`
+-   **Accents:** “Growth Green” and “Trust Blue”
+-   **Note:** Use accessible contrast.
+
+## Typography
+-   **Headings:** Inter / Space Grotesk
+-   **UI Copy:** Inter
+-   **Numbers:** Mono-ish weight for credibility.
+
+## Imagery
+-   **Graphs:** SVG-first.
+-   **Dynamic NFT Card:** Animated Lottie / Canvas.
+
+---
+
+# Main User Flows (Top-level)
+
+1.  **Landing / Value Pitch** → Signup (Wallet / GitHub / Google)
+2.  **Onboarding + Data Import** (connect sources)
+3.  **Profile** (Dynamic NFT + Reputation graph + Timeline) — *primary user-facing page*
+4.  **Achievements Feed** + Certificate issuance flow
+5.  **Recruiter / Institution Verification Portal** (Paid)
+6.  **Settings / Integrations / Billing**
+7.  **Admin Dashboard** (Org management, analytics, certificate issuance)
+
+---
+
+# Detailed Screen Breakdown
+
+## 1. Landing / Signup (First Impression)
+**Purpose:** Convert orgs + users. Fast trust signals.
+
+### Hero Block
+-   **Left:** Headline + 3 short benefits (verifiable, portable, visual). CTA: “Create your Reputation Passport”
+-   **Right:** Dynamic preview — a small animated NFT card rotating/transforming to show how badges appear.
+
+### Mini-demo Strip (Below Hero)
+-   “Verify in 1 click” (GitHub icon -> fetch commit graph)
+-   “Issue certificates” (institution panel mock)
+-   “Recruiter verify” (search + verify flow)
+
+**Footer CTA:** “Get started — free for students” + “Request enterprise demo” (for orgs).
+
+### Signup Modal
+-   **Options:** Connect Wallet, Continue with GitHub, Continue with Google (show small icons and short bullets of what will be imported).
+-   **Wallet Flow:** Connect via Wagmi.
+-   **GitHub Flow:** OAuth window with requested scopes explained.
+-   **Microcopy:** Be explicit which data you import and why. No surprises.
+
+## 2. Onboarding + Data Import (First-run)
+**Layout:** 2-column wizard (Left: steps vertical progress; Right: main content).
+
+### Steps
+1.  **Identity:** Choose display name, avatar, ENS / handle, email.
+2.  **Connect Sources:** GitHub, Google, LinkedIn (optional), Wallet. Big toggles, “Import now” buttons.
+3.  **Verify Certificates:** Upload or link. Drag & drop allows file upload, show “detect certificate” auto-hash preview.
+4.  **Visibility:** Choose public / private visibility for profile pieces.
+5.  **Preview:** Create/review dynamic NFT preview — a live canvas that shows current look.
+
+### Component: Integration Tile
+-   Icon, provider name, status (connected / failed), last sync time, “sync now” button, scope details collapsed.
+-   **Error States:** Display OAuth errors inline with suggested fixes.
+
+### UX Rules
+-   **Immediate Feedback:** After GitHub connect, show a mini commit sparkline and top 3 repos.
+-   **Hash-on-chain:** When the user accepts, show the “hashing” animation — spinner → chain icon → success tick.
+-   **Batching:** Option to batch on-chain writes into single transaction (cost-friendly) — explain gas costs transparently.
+
+## 3. Profile (The Heart)
+**Structure:** Single-page app with sections: Header + Hero NFT card + Reputation strip + Visual graph + Timeline + Achievements feed + CTA to share/export.
+
+### Header (Sticky)
+-   **Left:** Logo + Search (global)
+-   **Center:** Breadcrumb (Home / Profile / `<username>`)
+-   **Right:** Wallet + Settings + Notification icon
+
+### Hero NFT Card (Visual Centerpiece)
+-   **Size:** Large card (desktop: 420×300 px). Canvas-based dynamic NFT using offscreen WebGL or SVG animations. Should render deterministically from on-chain attributes (so UI = preview of what NFT actually is).
+-   **Layers:**
+    -   Base frame (glass / rounded)
+    -   Background gradient (driven by reputation tier)
+    -   Animated emblem(s) for top achievements
+    -   Score ribbon (top-left small)
+-   **CTA Buttons:** “Share Profile” / “Mint SBT” / “Export Resume”
+-   **Interaction:** Hover tilt + parallax. Click to expand — full-screen modal to explore badge details and trait metadata.
+-   **Accessibility:** Keyboard focus opens modal; provide alt-text for the card and a static fallback image.
+
+### Reputation Strip (Compact Stats)
+Horizontal set of clickable pill cards:
+-   Reputation score (big number + sparkline)
+-   Verified certificates (count + verified icon)
+-   Projects (count + top languages)
+-   Endorsements (count + verified endorsers)
+
+### Visual Reputation Graph (Big Differentiator)
+Centerpiece interactive D3/Three.js visualization.
+-   **Modes:** Force-layout / Radial / Timeline.
+-   **Nodes:** Certificate, Project, Hackathon, Endorsement, Repo.
+-   **Interaction:**
+    -   **Hover:** Show tooltip with metadata (issuer, date, hash).
+    -   **Click:** Open right-side panel that shows proof details and link to on-chain transaction.
+    -   **Control:** Zoom, pan, double-click to center.
+-   **Filters:** Chips above graph (show only certificates, only projects, etc.).
+-   **Time Slider:** Scrub to see historical state (snapshots at the time of on-chain writes).
+-   **Implementation Hints:** Use D3 for force layout or Three.js for more fluid physics with many nodes. Render persistent edges with subtle blur; animate new node entry.
+
+### Timeline (Vertical)
+-   **Card Content:** Date, icon, short text (“Coursera: Intro to ML — verified”), issuer, on-chain tx link, “download proof” button.
+-   **Expandable Details:** Raw hash, metadata JSON, and verifier signature.
+-   **CTA Inline:** “Issue certificate” (if institution) or “Challenge this claim” (flagging mechanism).
+
+### Achievements Feed (Grid)
+-   Badges with rarity, level, animated preview.
+-   Hover to see progress/next level.
+-   “Claim” button for events requiring extra verification.
+
+### Share and Verification Panel
+-   **Share Profile:** Options for public link (signed), embed widget, PDF export (AI resume generator).
+-   **Verify (Recruiter):** Show one-click verify flow with short receipt that can be attached to ATS.
+
+## 4. Recruiter / Institution Portal (Paid Experience)
+**Purpose:** Priority revenue driver.
+
+### Recruiter Dashboard
+-   **Top Search Bar:** Search by skill, reputation, verified certificates (with filters and saved searches).
+-   **Candidate List:** Cards with top metadata and a “Verify” quick button.
+-   **Verify Modal:** Shows snapshot of claims, on-chain proof, downloadable certificate, candidate’s top projects (linked to GitHub).
+-   **Billing:** Seat management, API keys, usage analytics.
+
+### Institution Panel (For Issuing Certs)
+-   **Create Template:** Title, issuer, metadata fields, expiry, scoring formula.
+-   **Issue Flow:** Upload CSV / API to batch issue. Each issuance auto-hashes and pushes a `lightTx`.
+-   **Revocation:** Revoke with reason — UI shows revoked badge and historical trace.
+-   **Reports:** List issued certs, claims, student adoption rate.
+
+### Monetization UI
+-   Clear plan pages with usage quotas (certificates per month, API calls, verifications).
+-   Trial credits for small orgs.
+-   Invoice and seat management in settings.
+
+## 5. Settings, Privacy, and Wallet UX
+-   **Account:** Email, name, display handle.
+-   **Connections:** List of connected providers + revoke.
+-   **Privacy:** Toggle visibility of each data type (certificates, repos, endorsements).
+-   **Wallet & Gas:** Choose preferred network (Polygon recommended), show gas estimate UI, show recent tx history.
+-   **Security:** 2FA, session management.
+-   **Audit Trail:** A page where users see exactly what got written on-chain (tx ids) and when. This is the trust center.
+
+## 6. Admin / Analytics (Internal)
+-   **Needs:** User growth, verification volume, revenue, certificate issuance, system metrics.
+-   **Key Widgets:** Active users (7/30/90 day), Certificates issued/month, Transactions (on-chain) with gas totals, Top institutions, Issues flagged, Payouts & billing reports.
+
+---
+
+# Component Library & Implementation
+
+**Stack:** React + Tailwind + Framer Motion.
+
+### Core Components
+-   `IntegrationTile` — Provider icon, name, status, action buttons.
+-   `DynamicNFTCard` — Canvas + lightweight controls.
+-   `ReputationPill` — Numeric + sparkline.
+-   `InteractiveGraph` — D3/Three wrapper with tooltip layer.
+-   `TimelineEvent` — Compact event card.
+-   `CertificateModal` — Proof details + download button.
+-   `RecruiterVerifyModal` — Summarized evidence + PDF/export.
+
+### Code Examples
+
+**Tailwind Snippet (Hero CTA):**
+```html
+<button class="px-5 py-3 rounded-xl shadow-sm bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:scale-[1.02] transition-transform">
+  Create Reputation Passport
+</button>
+```
+
+**Minimal Dynamic NFT Skeleton:**
+```jsx
+/* Use an SVG with layered groups bound to attributes. Update attributes in React based on traits. */
+
+<svg viewBox="0 0 420 300" className="w-full h-auto">
+  <defs>...</defs>
+  <rect rx="18" width="420" height="300" className="glass-bg"/>
+  <g id="badge-layer" transform={`translate(${x},${y})`}>
+    {/* SVG badge shapes animated via CSS or SMIL/JS */}
+  </g>
+  <text x="20" y="40" className="score">R: {score}</text>
+</svg>
+```
+
+### Micro-interactions
+-   **Buttons:** Quick scale down (0.96) and shadow change.
+-   **Graph Nodes:** Fade + pop with spring physics.
+-   **NFT Card:** Subtle breathing animation and parallax tilt on mouse movement.
+-   **Hash-on-chain:** “Optimistic” spinner with estimated confirmation time; success confetti + micro-modal with tx link.
+
+---
+
+# Responsive & Technical Guidelines
+
+## Responsive Rules
+-   **Desktop:** 3-column layout (Nav / Main / Details).
+-   **Tablet:** 2-column layout (NFT card above graph).
+-   **Mobile:** Single column. Hero card collapses to avatar; graph becomes timeline/radial view; filters collapse to accordion.
+
+## Accessibility
+-   All interactive elements keyboard-focusable.
+-   Color contrast >= 4.5:1 for body text.
+-   Aria labels on graph nodes.
+-   NFT card fallback.
+-   Screen-reader friendly timeline (semantic `<time>` tags).
+
+## Error States & Edge Cases
+-   **OAuth Failures:** Show exact error and “reconnect” CTA.
+-   **On-chain Failure:** Surface gas failure with retry and gas editor.
+-   **Large Graph:** Virtualize nodes, provide “simplify graph” mode.
+-   **Revocation:** Clearly show revoked claims and reason; display chaining.
+
+## Data → UI Mapping
+-   **GitHub Commits** → Projects (graph) + Contribution sparkline (reputation pill).
+-   **Certificates** → Nodes + Timeline event + Badge visuals (NFT).
+-   **Hackathon Wins** → High prominence nodes.
+-   **Endorsements** → Edge weight.
+-   **On-chain Tx Hash** → Timeline metadata + Link.
+
+## API Examples
+-   `GET /api/profile/:id` → Profile meta, traits, achievements, graph nodes.
+-   `POST /api/certificates/issue` → Body: `{issuerId, recipient, metadata}` → Returns `txId`.
+-   `GET /api/graph/:id?mode=force` → Nodes/edges for graph.
+
+## Performance
+-   Render graphs off main thread (WebWorker).
+-   SSR static parts (Next.js), hydrate dynamic parts.
+-   Cache GitHub data.
+-   **Batching:** Use incremental on-chain batching for low gas costs.
+
+## Final Product Advice
+-   **MVP:** Polished Profile + Trustworthy Verification.
+-   **Revenue:** Recruiter/Institution workflows are priority.
+-   **NFT Visuals:** Must be aesthetic and mappable to on-chain metadata.

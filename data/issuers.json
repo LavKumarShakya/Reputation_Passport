@@ -1,0 +1,24 @@
+{
+  "0xISSUER_WALLET_1": {
+    "name": "GDG SRMCEM",
+    "verified": true,
+    "type": "Hackathon Organizer",
+    "description": "Google Developer Group at SRMCEM",
+    "website": "https://gdg.community.dev"
+  },
+  "0xISSUER_WALLET_2": {
+    "name": "Coursera",
+    "verified": true,
+    "type": "Educational Institution",
+    "description": "Online learning platform",
+    "website": "https://coursera.org"
+  },
+  "0xISSUER_WALLET_3": {
+    "name": "GitHub",
+    "verified": true,
+    "type": "Platform",
+    "description": "Code hosting and collaboration platform",
+    "website": "https://github.com"
+  }
+}
+
