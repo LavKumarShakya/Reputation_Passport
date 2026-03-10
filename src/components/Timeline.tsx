@@ -22,13 +22,13 @@ const colorMap: Record<string, string> = {
 };
 
 interface TimelineItemProps {
-  event: TimelineEvent;
+  event: any; // using 'any' to dynamically map backend credential to existing UI
   index: number;
 }
 
 function TimelineItem({ event, index }: TimelineItemProps) {
   const [expanded, setExpanded] = useState(false);
-  const Icon = iconMap[event.type] || Award;
+  const Icon = iconMap[event.category?.toLowerCase() || 'certificate'] || Award;
 
   return (
     <motion.div
@@ -39,11 +39,11 @@ function TimelineItem({ event, index }: TimelineItemProps) {
     >
       {/* Timeline line */}
       <div className="absolute left-4 top-0 h-full w-px bg-border" />
-      
+
       {/* Icon */}
       <div className={cn(
         "absolute left-0 flex h-8 w-8 items-center justify-center rounded-full",
-        colorMap[event.type]
+        colorMap[event.category?.toLowerCase() || 'certificate'] || colorMap['certificate']
       )}>
         <Icon className="h-4 w-4" />
       </div>
@@ -54,7 +54,7 @@ function TimelineItem({ event, index }: TimelineItemProps) {
           <div className="flex-1">
             <div className="mb-1 flex items-center gap-2">
               <time className="font-mono text-xs text-muted-foreground">
-                {new Date(event.date).toLocaleDateString('en-US', {
+                {new Date(event.issuedAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',
@@ -66,14 +66,14 @@ function TimelineItem({ event, index }: TimelineItemProps) {
                 </span>
               )}
             </div>
-            
-            <h4 className="font-heading text-lg font-semibold">{event.title}</h4>
-            <p className="mt-1 text-sm text-muted-foreground">{event.description}</p>
-            
-            {event.issuer && (
+
+            <h4 className="font-heading text-lg font-semibold">{event.data?.courseName || event.data?.projectName || event.category}</h4>
+            <p className="mt-1 text-sm text-muted-foreground">{event.data?.description || 'Verified credential on-chain'}</p>
+
+            {event.issuerWallet && (
               <p className="mt-2 text-sm">
                 <span className="text-muted-foreground">Issued by: </span>
-                <span className="font-medium">{event.issuer}</span>
+                <span className="font-medium font-mono">{event.issuerWallet.slice(0, 10)}...</span>
               </p>
             )}
           </div>
@@ -102,7 +102,7 @@ function TimelineItem({ event, index }: TimelineItemProps) {
                 <p className="font-mono text-sm">{event.txHash}</p>
               </div>
             )}
-            
+
             <div className="flex gap-2">
               {event.txHash && (
                 <Button variant="outline" size="sm">
@@ -122,11 +122,15 @@ function TimelineItem({ event, index }: TimelineItemProps) {
   );
 }
 
-export function Timeline() {
+export function Timeline({ credentials = [] }: { credentials?: any[] }) {
+  if (!credentials || credentials.length === 0) {
+    return <p className="text-muted-foreground">No on-chain activity yet.</p>;
+  }
+
   return (
     <div className="space-y-6">
-      {timelineEvents.map((event, index) => (
-        <TimelineItem key={event.id} event={event} index={index} />
+      {credentials.map((event, index) => (
+        <TimelineItem key={event._id || index} event={event} index={index} />
       ))}
     </div>
   );

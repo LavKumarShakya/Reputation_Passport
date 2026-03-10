@@ -35,20 +35,23 @@ export function ReputationPill({ label, value, icon, sparkline, onClick }: Reput
   );
 }
 
-export function ReputationStrip() {
+export function ReputationStrip({ profileData }: { profileData?: any }) {
   const sparklineData = [12, 8, 15, 22, 18, 25, 30, 28, 35, 42, 38, 45];
+
+  const score = profileData?.user?.reputationScore || 0;
+  const certCount = profileData?.credentials?.length || 0;
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <ReputationPill
         label="Reputation Score"
-        value={847}
+        value={score}
         icon="score"
         sparkline={sparklineData}
       />
       <ReputationPill
         label="Verified Certificates"
-        value={4}
+        value={certCount}
         icon="certificates"
       />
       <ReputationPill

@@ -3,32 +3,45 @@ import { motion } from 'framer-motion';
 import { graphNodes, graphEdges, GraphNode } from '@/lib/mockData';
 import { cn } from '@/lib/utils';
 
+import { useGraphData } from '@/hooks/useProfileData';
+
 interface ReputationGraphProps {
   mode?: 'force' | 'radial';
+  walletAddress?: string;
 }
 
-export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
+export function ReputationGraph({ mode = 'force', walletAddress }: ReputationGraphProps) {
+  const { data: apiGraphData, isLoading } = useGraphData(walletAddress || '');
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [nodes, setNodes] = useState<(GraphNode & { x: number; y: number })[]>([]);
 
   useEffect(() => {
+    // Wait until we have API data
+    if (!apiGraphData || !apiGraphData.nodes || apiGraphData.nodes.length === 0) {
+      // Fallback to plotting the 'center' node if it's empty
+      setNodes([{ id: 'center', label: 'You', type: 'user', value: 100, x: 400, y: 250 }]);
+      return;
+    }
+
+    const { nodes: backendNodes } = apiGraphData;
+
     // Simple force-directed layout simulation
     const width = 800;
     const height = 500;
     const centerX = width / 2;
     const centerY = height / 2;
 
-    const positioned = graphNodes.map((node, i) => {
-      if (node.id === 'center') {
+    const positioned = backendNodes.map((node: any, i: number) => {
+      if (node.id === 'center' || node.type === 'user') {
         return { ...node, x: centerX, y: centerY };
       }
-      
+
       // Position nodes in a circle around center
-      const angle = (i / (graphNodes.length - 1)) * 2 * Math.PI;
+      const angle = (i / (backendNodes.length - 1)) * 2 * Math.PI;
       const radius = 150 + Math.random() * 50;
-      
+
       return {
         ...node,
         x: centerX + Math.cos(angle) * radius,
@@ -37,7 +50,7 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
     });
 
     setNodes(positioned);
-  }, [mode]);
+  }, [mode, apiGraphData]);
 
   const nodeColors: Record<string, string> = {
     certificate: '#22C55E',
@@ -75,7 +88,7 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
               <stop offset="0%" stopColor="hsl(var(--primary) / 0.1)" />
               <stop offset="100%" stopColor="transparent" />
             </radialGradient>
-            
+
             {/* Glow filter */}
             <filter id="glow">
               <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -89,7 +102,7 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
           <rect width="800" height="500" fill="url(#bgGradient)" />
 
           {/* Edges */}
-          {graphEdges.map((edge, i) => {
+          {apiGraphData?.edges?.map((edge: any, i: number) => {
             const source = getNodeById(edge.source);
             const target = getNodeById(edge.target);
             if (!source || !target) return null;
@@ -117,11 +130,11 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
               key={node.id}
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ 
+              transition={{
                 type: "spring",
                 stiffness: 300,
                 damping: 20,
-                delay: i * 0.1 
+                delay: i * 0.1
               }}
               onMouseEnter={() => setHoveredNode(node.id)}
               onMouseLeave={() => setHoveredNode(null)}
@@ -137,7 +150,7 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
                 opacity={hoveredNode === node.id ? 0.4 : 0.2}
                 filter="url(#glow)"
               />
-              
+
               {/* Node circle */}
               <circle
                 cx={node.x}
@@ -176,8 +189,8 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
           className="absolute right-4 top-4 w-64 rounded-xl glass-strong p-4"
         >
           <div className="mb-2 flex items-center gap-2">
-            <div 
-              className="h-3 w-3 rounded-full" 
+            <div
+              className="h-3 w-3 rounded-full"
               style={{ backgroundColor: nodeColors[selectedNode.type] }}
             />
             <span className="text-xs font-medium uppercase text-muted-foreground">
@@ -188,7 +201,7 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
           <p className="mt-1 text-sm text-muted-foreground">
             Value: {selectedNode.value}
           </p>
-          <button 
+          <button
             onClick={() => setSelectedNode(null)}
             className="mt-3 text-xs text-primary hover:underline"
           >
@@ -201,7 +214,7 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
       <div className="mt-4 flex flex-wrap gap-4">
         {Object.entries(nodeColors).map(([type, color]) => (
           <div key={type} className="flex items-center gap-2">
-            <div 
+            <div
               className="h-3 w-3 rounded-full"
               style={{ backgroundColor: color }}
             />
@@ -209,6 +222,12 @@ export function ReputationGraph({ mode = 'force' }: ReputationGraphProps) {
           </div>
         ))}
       </div>
+
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10 rounded-2xl">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      )}
     </div>
   );
 }

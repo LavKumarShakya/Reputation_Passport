@@ -6,6 +6,7 @@
  * - Uses ethers.js for blockchain interactions
  * - Contract address should be set after deployment
  * - Supports wallet connection via wagmi/ethers
+ * - Falls back to mock data for demonstration
  * 
  * PRODUCTION:
  * - Add error handling and retry logic
@@ -14,6 +15,13 @@
  */
 
 import { Contract, ethers, Provider } from 'ethers';
+import {
+  shouldUseMock,
+  getMockUserCredentials,
+  mockCredentialExists,
+  getMockCredential,
+  MOCK_CONTRACT_ADDRESS
+} from './mockBlockchain';
 
 // Contract ABI - Update after compilation
 export const REPUTATION_PASSPORT_ABI = [
@@ -30,7 +38,12 @@ export const REPUTATION_PASSPORT_ABI = [
 
 // TODO: Update with deployed contract address
 // Get this from deployment output or environment variable
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '';
+// For local testing, leave empty to use hardhat local network
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '';
+
+// Local Hardhat network address (for testing)
+// Update this after running: npx hardhat run test.js --network hardhat
+const LOCAL_CONTRACT_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 
 // Supported networks
 export const SUPPORTED_NETWORKS = {
@@ -53,14 +66,22 @@ export const SUPPORTED_NETWORKS = {
  * @returns Contract instance or null if not initialized
  */
 export async function getContract(signer?: ethers.Signer): Promise<Contract | null> {
-  if (!CONTRACT_ADDRESS) {
-    console.warn('Contract address not set. Please update CONTRACT_ADDRESS in contract.ts');
+  // Use mock mode if contract address not set
+  if (shouldUseMock()) {
+    console.log('📦 Using mock blockchain data for demonstration');
+    return null; // Return null to trigger mock mode in other functions
+  }
+
+  const address = CONTRACT_ADDRESS || LOCAL_CONTRACT_ADDRESS;
+
+  if (!address) {
+    console.warn('Contract address not set. Using mock data for demonstration.');
     return null;
   }
-  
+
   try {
     let provider: Provider | ethers.Signer;
-    
+
     if (signer) {
       provider = signer;
     } else {
@@ -69,14 +90,15 @@ export async function getContract(signer?: ethers.Signer): Promise<Contract | nu
         SUPPORTED_NETWORKS.amoy.rpcUrl
       );
     }
-    
+
     return new ethers.Contract(
-      CONTRACT_ADDRESS,
+      address,
       REPUTATION_PASSPORT_ABI,
       provider
     );
   } catch (error) {
     console.error('Error initializing contract:', error);
+    console.log('Falling back to mock data');
     return null;
   }
 }
@@ -101,21 +123,21 @@ export async function addCredential(
     if (!contract) {
       throw new Error('Contract not initialized');
     }
-    
+
     // Check if signer is whitelisted issuer
     const isIssuer = await contract.issuers(await signer.getAddress());
     if (!isIssuer) {
       throw new Error('Wallet is not a whitelisted issuer');
     }
-    
+
     // Submit transaction
     const tx = await contract.addCredential(userWallet, hash, category);
     console.log('Transaction submitted:', tx.hash);
-    
+
     // Wait for confirmation
     const receipt = await tx.wait();
     console.log('Transaction confirmed:', receipt);
-    
+
     return receipt;
   } catch (error) {
     console.error('Error adding credential:', error);
@@ -131,15 +153,18 @@ export async function addCredential(
 export async function getUserCredentials(userWallet: string): Promise<string[]> {
   try {
     const contract = await getContract();
+
+    // Use mock data if contract not available
     if (!contract) {
-      return [];
+      return getMockUserCredentials(userWallet);
     }
-    
+
     const hashes = await contract.getCredentials(userWallet);
     return hashes.map((hash: string) => hash);
   } catch (error) {
     console.error('Error fetching user credentials:', error);
-    return [];
+    // Fall back to mock data
+    return getMockUserCredentials(userWallet);
   }
 }
 

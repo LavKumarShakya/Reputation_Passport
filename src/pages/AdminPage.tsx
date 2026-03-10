@@ -1,25 +1,23 @@
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { 
-  Users, Award, Link2, DollarSign, TrendingUp, 
-  AlertTriangle, BarChart3, Activity 
+import {
+  Users, Award, Link2, DollarSign, TrendingUp,
+  AlertTriangle, BarChart3, Activity
 } from 'lucide-react';
 
-const stats = [
-  { label: 'Active Users (30d)', value: '12,847', change: '+12%', icon: Users },
-  { label: 'Certificates Issued', value: '45,231', change: '+8%', icon: Award },
-  { label: 'On-Chain Transactions', value: '89,445', change: '+15%', icon: Link2 },
-  { label: 'Monthly Revenue', value: '$45,890', change: '+22%', icon: DollarSign },
-];
+import { useAdminActivity, useAdminInstitutions, useAdminStats } from '@/hooks/useAdminData';
 
-const topInstitutions = [
-  { name: 'Coursera', issued: 12450, verified: 98.2 },
-  { name: 'Ethereum Foundation', issued: 8320, verified: 99.8 },
-  { name: 'AWS', issued: 6780, verified: 97.5 },
-  { name: 'freeCodeCamp', issued: 5430, verified: 96.1 },
-];
+const iconMap: Record<string, any> = {
+  Users: Users,
+  Award: Award,
+  Link2: Link2,
+  DollarSign: DollarSign
+};
 
 export default function AdminPage() {
+  const { stats, isLoading: statsLoading } = useAdminStats();
+  const { institutions, isLoading: instLoading } = useAdminInstitutions();
+  const { activity, isLoading: activityLoading } = useAdminActivity();
   return (
     <AppLayout>
       <div className="p-6 lg:p-8">
@@ -40,25 +38,34 @@ export default function AdminPage() {
 
           {/* Stats Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="rounded-2xl glass p-6"
-              >
-                <div className="flex items-center justify-between">
-                  <stat.icon className="h-8 w-8 text-primary" />
-                  <span className="flex items-center gap-1 text-sm font-medium text-accent">
-                    <TrendingUp className="h-4 w-4" />
-                    {stat.change}
-                  </span>
-                </div>
-                <p className="mt-4 stat-number text-3xl font-bold">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </motion.div>
-            ))}
+            {statsLoading ? (
+              <div className="col-span-4 flex h-32 items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+              </div>
+            ) : (
+              stats.map((stat, i) => {
+                const IconComponent = iconMap[stat.icon] || BarChart3;
+                return (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="rounded-2xl glass p-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <IconComponent className="h-8 w-8 text-primary" />
+                      <span className="flex items-center gap-1 text-sm font-medium text-accent">
+                        <TrendingUp className="h-4 w-4" />
+                        {stat.change}
+                      </span>
+                    </div>
+                    <p className="mt-4 stat-number text-3xl font-bold">{stat.value}</p>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  </motion.div>
+                );
+              })
+            )}
           </div>
 
           <div className="grid gap-8 lg:grid-cols-2">
@@ -92,26 +99,26 @@ export default function AdminPage() {
                 <Activity className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="space-y-4">
-                {[
-                  { action: 'New user registered', user: 'john.eth', time: '2 min ago', type: 'user' },
-                  { action: 'Certificate issued', user: 'Coursera', time: '5 min ago', type: 'cert' },
-                  { action: 'Verification completed', user: 'recruiter@company.com', time: '12 min ago', type: 'verify' },
-                  { action: 'Flagged content', user: 'system', time: '1 hour ago', type: 'flag' },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-lg bg-secondary/50 p-3">
-                    <div className={`h-2 w-2 rounded-full ${
-                      item.type === 'user' ? 'bg-accent' :
-                      item.type === 'cert' ? 'bg-primary' :
-                      item.type === 'verify' ? 'bg-purple-500' :
-                      'bg-destructive'
-                    }`} />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{item.action}</p>
-                      <p className="text-xs text-muted-foreground">{item.user}</p>
+                {activityLoading ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">Loading activity...</div>
+                ) : activity.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">No recent activity</div>
+                ) : (
+                  activity.map((item, i) => (
+                    <div key={i} className="flex items-center gap-4 rounded-lg bg-secondary/50 p-3">
+                      <div className={`h-2 w-2 rounded-full ${item.type === 'user' ? 'bg-accent' :
+                          item.type === 'cert' ? 'bg-primary' :
+                            item.type === 'verify' ? 'bg-purple-500' :
+                              'bg-destructive'
+                        }`} />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{item.action}</p>
+                        <p className="text-xs text-muted-foreground">{item.user}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{item.time}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{item.time}</span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -130,28 +137,39 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {topInstitutions.map(inst => (
-                    <tr key={inst.name} className="border-b border-border/50">
-                      <td className="p-4 font-medium">{inst.name}</td>
-                      <td className="p-4 stat-number">{inst.issued.toLocaleString()}</td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-                            <div 
-                              className="h-full bg-accent"
-                              style={{ width: `${inst.verified}%` }}
-                            />
-                          </div>
-                          <span className="text-sm">{inst.verified}%</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="rounded-full bg-accent/20 px-2 py-1 text-xs font-medium text-accent">
-                          Active
-                        </span>
-                      </td>
+                  {instLoading ? (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-muted-foreground">Loading institutions...</td>
                     </tr>
-                  ))}
+                  ) : institutions.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-muted-foreground">No institutions found</td>
+                    </tr>
+                  ) : (
+                    institutions.map(inst => (
+                      <tr key={inst.name} className="border-b border-border/50">
+                        <td className="p-4 font-medium">{inst.name}</td>
+                        <td className="p-4 stat-number">{inst.issued.toLocaleString()}</td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+                              <div
+                                className="h-full bg-accent"
+                                style={{ width: `${inst.verified}%` }}
+                              />
+                            </div>
+                            <span className="text-sm">{inst.verified}%</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className={`rounded-full px-2 py-1 text-xs font-medium ${inst.status === 'Active' ? 'bg-accent/20 text-accent' : 'bg-yellow-500/20 text-yellow-500'
+                            }`}>
+                            {inst.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

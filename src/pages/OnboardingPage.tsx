@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  User, Link2, Shield, Eye, Sparkles, 
-  Check, ArrowRight, ArrowLeft, Github, 
-  Mail, Wallet, Upload, Loader2 
+import {
+  User, Link2, Shield, Eye, Sparkles,
+  Check, ArrowRight, ArrowLeft, Github,
+  Mail, Wallet, Upload, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { OnChainStatus } from '@/components/OnChainStatus';
+import { useEffect } from 'react';
 
 const steps = [
   { id: 'identity', title: 'Identity', icon: User },
@@ -21,6 +22,21 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [hashingStatus, setHashingStatus] = useState<'idle' | 'hashing' | 'confirming' | 'success'>('idle');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const githubId = searchParams.get('github_id');
+    const githubUser = searchParams.get('github_user');
+
+    if (githubId && githubUser) {
+      setFormData(prev => ({
+        ...prev,
+        connectedSources: { ...prev.connectedSources, github: true },
+        handle: githubUser + '.eth' // Suggest handle from github
+      }));
+      setCurrentStep(1); // Ensure we stay on sources step
+    }
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     displayName: '',
@@ -65,6 +81,13 @@ export default function OnboardingPage() {
   };
 
   const toggleSource = (source: keyof typeof formData.connectedSources) => {
+    if (source === 'github' && !formData.connectedSources.github) {
+      // Redirect to backend OAuth flow
+      const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      window.location.href = `${backendUrl}/api/auth/github`;
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       connectedSources: {
@@ -108,17 +131,15 @@ export default function OnboardingPage() {
                 <button
                   key={step.id}
                   onClick={() => setCurrentStep(i)}
-                  className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all ${
-                    i === currentStep 
-                      ? 'bg-primary text-primary-foreground' 
-                      : i < currentStep
+                  className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all ${i === currentStep
+                    ? 'bg-primary text-primary-foreground'
+                    : i < currentStep
                       ? 'text-accent'
                       : 'text-muted-foreground hover:bg-secondary'
-                  }`}
+                    }`}
                 >
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                    i === currentStep ? 'bg-white/20' : 'bg-secondary'
-                  }`}>
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${i === currentStep ? 'bg-white/20' : 'bg-secondary'
+                    }`}>
                     {i < currentStep ? (
                       <Check className="h-4 w-4" />
                     ) : (
@@ -213,11 +234,10 @@ export default function OnboardingPage() {
                     ].map(source => (
                       <div
                         key={source.id}
-                        className={`flex items-center gap-4 rounded-xl border p-4 transition-all ${
-                          formData.connectedSources[source.id]
-                            ? 'border-accent bg-accent/10'
-                            : 'border-border bg-secondary/30 hover:border-primary/30'
-                        }`}
+                        className={`flex items-center gap-4 rounded-xl border p-4 transition-all ${formData.connectedSources[source.id]
+                          ? 'border-accent bg-accent/10'
+                          : 'border-border bg-secondary/30 hover:border-primary/30'
+                          }`}
                       >
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
                           <source.icon className="h-6 w-6" />
@@ -328,14 +348,12 @@ export default function OnboardingPage() {
                         </div>
                         <button
                           onClick={() => toggleVisibility(item.id)}
-                          className={`relative h-6 w-11 rounded-full transition-colors ${
-                            formData.visibility[item.id] ? 'bg-accent' : 'bg-muted'
-                          }`}
+                          className={`relative h-6 w-11 rounded-full transition-colors ${formData.visibility[item.id] ? 'bg-accent' : 'bg-muted'
+                            }`}
                         >
                           <div
-                            className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${
-                              formData.visibility[item.id] ? 'left-6' : 'left-1'
-                            }`}
+                            className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${formData.visibility[item.id] ? 'left-6' : 'left-1'
+                              }`}
                           />
                         </button>
                       </div>
@@ -360,7 +378,7 @@ export default function OnboardingPage() {
                   <div className="flex justify-center">
                     <div className="relative h-[250px] w-[350px] overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-yellow-500 via-amber-400 to-yellow-600">
                       <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
-                      
+
                       <div className="absolute left-4 top-4 flex items-center gap-2 rounded-lg bg-black/30 px-3 py-1.5 backdrop-blur-sm">
                         <Sparkles className="h-4 w-4 text-yellow-300" />
                         <span className="font-mono text-lg font-bold text-white">500</span>

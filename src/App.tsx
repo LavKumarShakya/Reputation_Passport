@@ -15,6 +15,7 @@ import RecruiterPage from "./pages/RecruiterPage";
 import InstitutionPage from "./pages/InstitutionPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/AdminPage";
+import TestBlockchainPage from "./pages/TestBlockchainPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/institution" element={<InstitutionPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/test-blockchain" element={<TestBlockchainPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

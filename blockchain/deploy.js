@@ -10,15 +10,14 @@ const { ethers } = require("hardhat");
  */
 async function main() {
   const [deployer] = await ethers.getSigners();
-  
+
   console.log("Deploying contracts with account:", deployer.address);
   console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
 
   // Deploy ReputationPassport contract
-  const ReputationPassport = await ethers.getContractFactory("ReputationPassport");
-  const reputationPassport = await ReputationPassport.deploy();
-
+  const reputationPassport = await ethers.deployContract("ReputationPassport");
   await reputationPassport.waitForDeployment();
+
   const address = await reputationPassport.getAddress();
 
   console.log("ReputationPassport deployed to:", address);
