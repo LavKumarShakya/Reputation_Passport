@@ -8,7 +8,10 @@ export function useProfile(walletOrHandle: string) {
 
     useEffect(() => {
         async function load() {
-            if (!walletOrHandle) return;
+            if (!walletOrHandle) {
+                setIsLoading(false);
+                return;
+            }
             setIsLoading(true);
             try {
                 const response = await api.get(`/profile/${walletOrHandle}`);
@@ -31,7 +34,10 @@ export function useGraphData(walletAddress: string) {
 
     useEffect(() => {
         async function load() {
-            if (!walletAddress) return;
+            if (!walletAddress) {
+                setIsLoading(false);
+                return;
+            }
             setIsLoading(true);
             try {
                 const response = await api.get(`/graph/${walletAddress}`);
@@ -73,4 +79,30 @@ export function useIssuerCredentials(walletAddress: string) {
     }, [walletAddress]);
 
     return { credentials, isLoading, error, setCredentials };
+}
+
+export function useAchievements(userId: string) {
+    const [achievements, setAchievements] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        async function load() {
+            if (!userId) {
+                setIsLoading(false);
+                return;
+            }
+            setIsLoading(true);
+            try {
+                const response = await api.get(`/achievements/${userId}`);
+                setAchievements(response.data);
+            } catch (err) {
+                console.error('Failed to fetch achievements', err);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        load();
+    }, [userId]);
+
+    return { achievements, isLoading };
 }

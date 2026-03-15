@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
 import axios from 'axios';
 import User from '../models/User';
+import Credential from '../models/Credential';
+import Achievement from '../models/Achievement';
 
 const router = Router();
 
@@ -107,12 +109,13 @@ router.post('/wallet', async (req: Request, res: Response) => {
 
 // GET /api/auth/github — Redirect to GitHub OAuth
 router.get('/github', (req: Request, res: Response) => {
-    const clientId = process.env.GITHUB_CLIENT_ID;
-    const redirectUri = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/github/callback`;
+    const githubUrl = new URL('https://github.com/login/oauth/authorize');
+    githubUrl.searchParams.set('client_id', process.env.GITHUB_CLIENT_ID || '');
+    githubUrl.searchParams.set('redirect_uri', `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/github/callback`);
+    githubUrl.searchParams.set('scope', 'read:user user:email');
 
-    // We can pass the current user's token or a session ID in the 'state' if needed
-    const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user`;
-    res.redirect(githubUrl);
+    console.log('Redirecting to GitHub:', githubUrl.toString());
+    res.redirect(githubUrl.toString());
 });
 
 // GET /api/auth/github/callback — Handle GitHub redirect
@@ -120,7 +123,7 @@ router.get('/github/callback', async (req: Request, res: Response) => {
     try {
         const { code } = req.query;
         if (!code) {
-            res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/onboarding?error=no_code`);
+            res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?error=no_code`);
             return;
         }
 
@@ -135,7 +138,7 @@ router.get('/github/callback', async (req: Request, res: Response) => {
 
         const accessToken = tokenResponse.data.access_token;
         if (!accessToken) {
-            res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/onboarding?error=auth_failed`);
+            res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?error=auth_failed`);
             return;
         }
 
@@ -144,18 +147,181 @@ router.get('/github/callback', async (req: Request, res: Response) => {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
-        const { id, login, avatar_url } = userResponse.data;
+        const { id: githubId, login, avatar_url, name, email, followers, public_repos, created_at } = userResponse.data;
 
-        // In a real app, we would link this to the LOGGED IN user.
-        // For this demo/onboarding flow, we might redirect back with the info 
-        // or create/update a user if we have a way to track them.
+        // --- CALCULATION LOGIC ---
+        // --- DEEP FRAMEWORK DETECTION ---
+        let totalStars = 0;
+        const techStack: Record<string, number> = {};
+        const popularFrameworks = ['react', 'node', 'nextjs', 'vue', 'angular', 'express', 'tailwind', 'bootstrap', 'mongodb', 'postgresql', 'docker', 'kubernetes', 'aws', 'firebase', 'flutter', 'react-native', 'ethers', 'web3', 'solidity', 'hardhat', 'truffle', 'typescript', 'javascript'];
+        
+        try {
+            const reposResponse = await axios.get(`https://api.github.com/users/${login}/repos?per_page=100&sort=updated`, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            const repos = reposResponse.data;
+            
+            for (const repo of repos) {
+                totalStars += repo.stargazers_count;
+                
+                // 1. Languages (GitHub Native)
+                if (repo.language) {
+                    techStack[repo.language] = (techStack[repo.language] || 0) + 50;
+                }
+                
+                // 2. Topics (User-defined tags)
+                if (repo.topics && Array.isArray(repo.topics)) {
+                    repo.topics.forEach((topic: string) => {
+                        const lowerTopic = topic.toLowerCase();
+                        if (popularFrameworks.includes(lowerTopic)) {
+                            techStack[lowerTopic] = (techStack[lowerTopic] || 0) + 70; // Higher confidence from topics
+                        } else {
+                            techStack[lowerTopic] = (techStack[lowerTopic] || 0) + 10;
+                        }
+                    });
+                }
+                
+                // 3. Manifest Scanning (package.json for JS/TS)
+                // Limit to top 5 most recently updated repos to avoid rate limits
+                if (repos.indexOf(repo) < 5 && (repo.language === 'TypeScript' || repo.language === 'JavaScript')) {
+                    try {
+                        const contentsUrl = `https://api.github.com/repos/${login}/${repo.name}/contents/package.json`;
+                        const pkgResponse = await axios.get(contentsUrl, {
+                            headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/vnd.github.v3.raw' }
+                        });
+                        const pkg = typeof pkgResponse.data === 'string' ? JSON.parse(pkgResponse.data) : pkgResponse.data;
+                        const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+                        
+                        Object.keys(deps).forEach(dep => {
+                            const cleanDep = dep.replace(/^@/, '').split('/')[0].toLowerCase();
+                            if (popularFrameworks.includes(cleanDep)) {
+                                techStack[cleanDep] = (techStack[cleanDep] || 0) + 100; // 100% confidence from manifest
+                            }
+                        });
+                    } catch (err) {
+                        // ignore if package.json doesn't exist
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Failed deep tech scan:', err);
+        }
 
-        // Redirect back to frontend onboarding with the github info
-        // The frontend can then update its local state
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/onboarding?github_id=${id}&github_user=${login}&github_token=${accessToken}`);
-    } catch (error) {
-        console.error('GitHub OAuth Error:', error);
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/onboarding?error=server_error`);
+        // 2. Calculate Account Age in Years
+        const accountAgeMs = Date.now() - new Date(created_at).getTime();
+        const accountAgeYears = accountAgeMs / (1000 * 60 * 60 * 24 * 365);
+
+        // 3. Compute Points (Max 1000)
+        let score = 0;
+        score += Math.min(followers * 5, 200);           // Max 200 from followers
+        score += Math.min(public_repos * 10, 200);       // Max 200 from repos
+        score += Math.min(totalStars * 20, 400);         // Max 400 from stars
+        score += Math.min(accountAgeYears * 20, 200);    // Max 200 from age
+        score = Math.floor(score); // Round to whole number
+
+        // 4. Determine Tier
+        let calculatedTier = 'bronze';
+        if (score > 800) calculatedTier = 'diamond';
+        else if (score > 500) calculatedTier = 'gold';
+        else if (score > 200) calculatedTier = 'silver';
+
+        // Upsert: find by GitHub ID OR email, then update. If not found, create.
+        const searchConditions: any[] = [{ 'connectedProviders.github.id': String(githubId) }];
+        if (email) searchConditions.push({ email: email });
+
+        const user = await User.findOneAndUpdate(
+            { $or: searchConditions },
+            {
+                $set: {
+                    reputationScore: score,
+                    tier: calculatedTier,
+                    techStack: techStack,
+                    'connectedProviders.github': { id: String(githubId), username: login, accessToken: accessToken },
+                },
+                $setOnInsert: {
+                    displayName: name || login,
+                    handle: login,
+                    email: email || `${login}@github.local`,
+                    avatar: avatar_url,
+                    verified: true,
+                },
+            },
+            { upsert: true, new: true, runValidators: false }
+        );
+
+        if (!user) throw new Error('User upsert returned null');
+
+        // Update avatar only if the stored one is a placeholder
+        if (!user.avatar || user.avatar.includes('api.dicebear.com')) {
+            await User.findByIdAndUpdate(user._id, { $set: { avatar: avatar_url } });
+            user.avatar = avatar_url;
+        }
+
+        // --- GRANT ACHIEVEMENTS ---
+        // 1. Genesis Node (granted for connecting GitHub)
+        try {
+            await Achievement.findOneAndUpdate(
+                { userId: user._id, type: 'genesis_node' },
+                {
+                    $setOnInsert: {
+                        userId: user._id,
+                        title: 'Genesis Node',
+                        description: 'Successfully initialized a Reputation Passport with GitHub OAuth.',
+                        icon: '🚀',
+                        rarity: 'common',
+                        type: 'genesis_node',
+                        earnedAt: new Date()
+                    }
+                },
+                { upsert: true }
+            );
+        } catch (err) { /* ignore duplicate index error */ }
+
+        // 2. High Reputation (granted if score > 500)
+        if (score > 500) {
+            try {
+                await Achievement.findOneAndUpdate(
+                    { userId: user._id, type: 'high_rep' },
+                    {
+                        $setOnInsert: {
+                            userId: user._id,
+                            title: 'Elite Vector',
+                            description: 'Achieved a global reputation score higher than 500.',
+                            icon: '🏆',
+                            rarity: 'rare',
+                            type: 'high_rep',
+                            earnedAt: new Date()
+                        }
+                    },
+                    { upsert: true }
+                );
+            } catch (err) { }
+        }
+
+        // Issue JWT
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
+            expiresIn: '7d',
+        });
+
+        // Redirect to frontend with the token — frontend will store it
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/auth/callback?token=${token}&userId=${user._id}&displayName=${encodeURIComponent(user.displayName)}&handle=${user.handle}&avatar=${encodeURIComponent(user.avatar)}`);
+    } catch (error: any) {
+        console.error('\n\n################################################################');
+        console.error('#################### GITHUB OAUTH ERROR ########################');
+        console.error('MESSAGE:', error.message);
+        console.error('STACK:', error.stack);
+        if (error.response) {
+            console.error('RESPONSE DATA:', JSON.stringify(error.response.data, null, 2));
+        }
+        console.error('################################################################\n\n');
+
+        const fs = require('fs');
+        const errMsg = `[${new Date().toISOString()}]\nMessage: ${error.message}\nStack: ${error.stack}\nResponseData: ${JSON.stringify(error?.response?.data)}\n\n`;
+        fs.appendFileSync('oauth-error.log', errMsg);
+
+        const safeMsg = encodeURIComponent(error.message || 'unknown');
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth?error=server_error_v4&msg=${safeMsg}`);
     }
 });
 

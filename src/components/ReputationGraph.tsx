@@ -16,16 +16,36 @@ export function ReputationGraph({ mode = 'force', walletAddress }: ReputationGra
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [nodes, setNodes] = useState<(GraphNode & { x: number; y: number })[]>([]);
+  const [activeFilter, setActiveFilter] = useState('All');
 
   useEffect(() => {
     // Wait until we have API data
     if (!apiGraphData || !apiGraphData.nodes || apiGraphData.nodes.length === 0) {
       // Fallback to plotting the 'center' node if it's empty
-      setNodes([{ id: 'center', label: 'You', type: 'user', value: 100, x: 400, y: 250 }]);
+      setNodes([{ id: 'center', label: 'You', type: 'user' as any, value: 100, color: '#F97316', x: 400, y: 250 }]);
       return;
     }
 
     const { nodes: backendNodes } = apiGraphData;
+
+    // --- APPLY FILTERING ---
+    let filteredNodes = backendNodes;
+    if (activeFilter === 'All') {
+      // Show everything EXCEPT non-popular skills
+      filteredNodes = backendNodes.filter((n: any) => {
+        if (n.type === 'skill' && !n.popular) return false;
+        return true;
+      });
+    } else if (activeFilter === 'Certificates') {
+      filteredNodes = backendNodes.filter((n: any) => n.type === 'certificate' || n.type === 'user');
+    } else if (activeFilter === 'Projects') {
+      filteredNodes = backendNodes.filter((n: any) => n.type === 'project' || n.type === 'user');
+    } else if (activeFilter === 'Hackathons') {
+      filteredNodes = backendNodes.filter((n: any) => n.type === 'hackathon' || n.type === 'user');
+    } else if (activeFilter === 'Skills') {
+      // Show ALL skills + user
+      filteredNodes = backendNodes.filter((n: any) => n.type === 'skill' || n.type === 'user');
+    }
 
     // Simple force-directed layout simulation
     const width = 800;
@@ -33,13 +53,13 @@ export function ReputationGraph({ mode = 'force', walletAddress }: ReputationGra
     const centerX = width / 2;
     const centerY = height / 2;
 
-    const positioned = backendNodes.map((node: any, i: number) => {
+    const positioned = filteredNodes.map((node: any, i: number) => {
       if (node.id === 'center' || node.type === 'user') {
         return { ...node, x: centerX, y: centerY };
       }
 
       // Position nodes in a circle around center
-      const angle = (i / (backendNodes.length - 1)) * 2 * Math.PI;
+      const angle = (i / (filteredNodes.length - 1 || 1)) * 2 * Math.PI;
       const radius = 150 + Math.random() * 50;
 
       return {
@@ -50,7 +70,7 @@ export function ReputationGraph({ mode = 'force', walletAddress }: ReputationGra
     });
 
     setNodes(positioned);
-  }, [mode, apiGraphData]);
+  }, [mode, apiGraphData, activeFilter]);
 
   const nodeColors: Record<string, string> = {
     certificate: '#22C55E',
@@ -58,18 +78,25 @@ export function ReputationGraph({ mode = 'force', walletAddress }: ReputationGra
     hackathon: '#F59E0B',
     endorsement: '#EC4899',
     skill: '#3B82F6',
+    user: '#F97316',
   };
 
   const getNodeById = (id: string) => nodes.find(n => n.id === id);
 
   return (
-    <div className="relative">
+    <div className="relative p-6">
       {/* Filters */}
       <div className="mb-4 flex gap-2">
         {['All', 'Certificates', 'Projects', 'Hackathons', 'Skills'].map(filter => (
           <button
             key={filter}
-            className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+            onClick={() => setActiveFilter(filter)}
+            className={cn(
+              "rounded-full px-3 py-1 text-sm font-medium transition-colors",
+              activeFilter === filter 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            )}
           >
             {filter}
           </button>

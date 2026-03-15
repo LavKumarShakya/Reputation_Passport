@@ -19,11 +19,16 @@ interface AuthState {
 
 export function useAuth() {
   const [state, setState] = useState<AuthState>(() => {
-    // Check if we already have a token
+    // Check if we already have a token and user data
     const token = localStorage.getItem('auth_token');
+    const storedUser = localStorage.getItem('auth_user');
+    let user: User | null = null;
+    try {
+      if (storedUser) user = JSON.parse(storedUser);
+    } catch { }
     return {
       isAuthenticated: !!token,
-      user: null, // We would normally decode the token or fetch /me here
+      user,
       isLoading: false,
       authMethod: null,
     };

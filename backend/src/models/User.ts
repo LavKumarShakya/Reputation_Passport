@@ -14,6 +14,7 @@ export interface IUser extends Document {
         github?: { id: string; username: string; accessToken: string };
         google?: { id: string; email: string };
     };
+    techStack?: Record<string, number>; // Map of technology to weight/bytes
     visibility: {
         certificates: boolean;
         repos: boolean;
@@ -37,6 +38,7 @@ const UserSchema = new Schema<IUser>({
         github: { id: String, username: String, accessToken: String },
         google: { id: String, email: String },
     },
+    techStack: { type: Map, of: Number, default: {} },
     visibility: {
         certificates: { type: Boolean, default: true },
         repos: { type: Boolean, default: true },

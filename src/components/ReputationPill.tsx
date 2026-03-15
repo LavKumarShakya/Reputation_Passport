@@ -1,4 +1,4 @@
-import { TrendingUp, Award, GitBranch, Users } from 'lucide-react';
+import { TrendingUp, Award, GitBranch, Users, ArrowUpRight } from 'lucide-react';
 
 interface ReputationPillProps {
   label: string;
@@ -21,16 +21,22 @@ export function ReputationPill({ label, value, icon, sparkline, onClick }: Reput
   return (
     <button
       onClick={onClick}
-      className="flex flex-1 items-center gap-4 rounded-2xl glass p-4 transition-colors hover:bg-secondary"
+      className="group relative flex flex-col justify-between border border-border/50 bg-secondary/5 p-6 transition-all hover:bg-secondary/40 hover:border-primary/50 overflow-hidden min-h-[140px] text-left"
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-        <Icon className="h-6 w-6 text-primary" />
+      <div className="flex items-start justify-between w-full mb-4">
+        <div className="flex h-10 w-10 items-center justify-center border border-border/50 bg-background group-hover:bg-primary/10 group-hover:border-primary/50 transition-colors">
+          <Icon className="h-5 w-5 text-foreground group-hover:text-primary transition-colors" />
+        </div>
+        <ArrowUpRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
       </div>
 
-      <div className="flex-1 text-left">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="stat-number text-2xl font-bold">{value}</p>
+      <div>
+        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+        <p className="font-heading text-3xl font-bold tracking-tight text-foreground">{value}</p>
       </div>
+
+      {/* Decorative scanline on hover */}
+      <div className="absolute top-0 right-0 w-1 h-full bg-primary translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
     </button>
   );
 }
@@ -39,29 +45,41 @@ export function ReputationStrip({ profileData }: { profileData?: any }) {
   const sparklineData = [12, 8, 15, 22, 18, 25, 30, 28, 35, 42, 38, 45];
 
   const score = profileData?.user?.reputationScore || 0;
-  const certCount = profileData?.credentials?.length || 0;
+  const credentials = profileData?.credentials || [];
+  const certCount = credentials.length;
+  
+  // Actually count real project and endorsement credentials
+  const projectCount = credentials.filter((c: any) => 
+    c.category?.toLowerCase().includes('project') || 
+    c.category?.toLowerCase().includes('github')
+  ).length;
+
+  const endorsementCount = credentials.filter((c: any) => 
+    c.category?.toLowerCase().includes('endorsement') || 
+    c.category?.toLowerCase().includes('skill')
+  ).length;
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <ReputationPill
-        label="Reputation Score"
+        label="Rep. Score"
         value={score}
         icon="score"
         sparkline={sparklineData}
       />
       <ReputationPill
-        label="Verified Certificates"
+        label="Verified Proofs"
         value={certCount}
         icon="certificates"
       />
       <ReputationPill
-        label="Projects"
-        value={12}
+        label="Node Projects"
+        value={projectCount}
         icon="projects"
       />
       <ReputationPill
-        label="Endorsements"
-        value={34}
+        label="Network Endorses"
+        value={endorsementCount}
         icon="endorsements"
       />
     </div>

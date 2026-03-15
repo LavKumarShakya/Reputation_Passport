@@ -10,6 +10,7 @@ import graphRoutes from './routes/graph';
 import issuerRoutes from './routes/issuers';
 import userRoutes from './routes/users';
 import adminRoutes from './routes/admin';
+import achievementRoutes from './routes/achievement';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/graph', graphRoutes);
 app.use('/api/issuers', issuerRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
