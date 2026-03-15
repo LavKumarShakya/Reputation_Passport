@@ -36,11 +36,19 @@ Each user receives a **Dynamic NFT Reputation Passport** that visually evolves a
 - Public verification: anyone can query a hash to confirm authenticity
 - Transaction hashes linked to Polygon/local explorer
 
-### 🔐 Authentication
+### 🔐 Authentication & Governance
 - Email/password registration and login (bcrypt + JWT)
 - Web3 wallet authentication (MetaMask signature verification)
-- **Dev Mode:** Mock wallet login with 5 pre-seeded tier accounts for testing
-- GitHub OAuth 2.0 integration (redirect-based flow)
+- GitHub OAuth 2.0 integration (Full profile & tech-stack sync)
+- **Identity Matrix:** Self-sovereign profile management (update handle, alias, email)
+- **Account Purge:** Irreversible node termination (wipes all user data & credentials)
+- **Secure Logout:** Token destruction and session termination
+
+### 📊 Reputation Graph (Node Topology)
+- Multidimensional visualization of professional footprint
+- **Deep Tech-Stack Scan:** Heuristic analysis of GitHub `package.json` manifests and repository topics
+- **Contextual Filtering:** Toggle between "Popular Tech" and full "Skills" discovery
+- Force-directed and Radial layout algorithms
 
 ---
 
