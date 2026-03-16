@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { OnChainStatus } from '@/components/OnChainStatus';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 const steps = [
   { id: 'identity', title: 'Sovereign Identity', icon: User, desc: 'Define your public anchor' },
@@ -23,6 +24,7 @@ export default function OnboardingPage() {
   const [hashingStatus, setHashingStatus] = useState<'idle' | 'hashing' | 'confirming' | 'success'>('idle');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState({
     displayName: '',
@@ -30,9 +32,9 @@ export default function OnboardingPage() {
     email: '',
     avatar: null as File | null,
     connectedSources: {
-      github: false,
-      google: false,
-      wallet: false,
+      github: !!user?.connectedProviders?.github,
+      google: !!user?.connectedProviders?.google,
+      wallet: !!user?.walletAddress,
       linkedin: false,
     },
     certificates: [] as File[],
@@ -81,7 +83,16 @@ export default function OnboardingPage() {
   };
 
   const toggleSource = (source: keyof typeof formData.connectedSources) => {
-    if (source === 'github' && !formData.connectedSources.github) {
+    if (source === 'github') {
+      // If already connected, just toggle local state (or do nothing if you want it sticky)
+      if (user?.connectedProviders?.github || formData.connectedSources.github) {
+        setFormData(prev => ({
+          ...prev,
+          connectedSources: { ...prev.connectedSources, github: !prev.connectedSources.github }
+        }));
+        return;
+      }
+      
       // Redirect to backend OAuth flow
       const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
       window.location.href = `${backendUrl}/api/auth/github`;

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TopNavProps {
   onMenuClick?: () => void;
@@ -12,6 +13,7 @@ interface TopNavProps {
 
 export function TopNav({ onMenuClick, walletConnected, walletAddress }: TopNavProps) {
   const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
   
   const getBreadcrumb = () => {
     const path = location.pathname;
@@ -82,7 +84,14 @@ export function TopNav({ onMenuClick, walletConnected, walletAddress }: TopNavPr
           </div>
 
           <div className="ml-2">
-            {walletConnected ? (
+            {isAuthenticated ? (
+              <Link to="/profile">
+                <Button variant="outline" size="sm" className="gap-2 h-10 rounded-none border-primary/30 bg-primary/5 hover:bg-primary/10 px-4">
+                  <div className="h-2 w-2 rounded-full bg-accent animate-pulse-icon" />
+                  <span className="font-mono text-xs text-foreground">{user?.handle || 'AUTHORIZED'}</span>
+                </Button>
+              </Link>
+            ) : walletConnected ? (
               <Button variant="outline" size="sm" className="gap-2 h-10 rounded-none border-primary/30 bg-primary/5 hover:bg-primary/10">
                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse-icon" />
                 <span className="font-mono text-xs">{walletAddress}</span>

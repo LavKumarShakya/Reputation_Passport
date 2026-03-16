@@ -11,7 +11,8 @@ import {
   LayoutDashboard,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Sparkles
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ const portalItems = [
 ];
 
 const systemItems = [
+  { title: 'Onboarding', icon: Sparkles, path: '/onboarding' },
   { title: 'Settings', icon: Settings, path: '/settings' },
   { title: 'Admin Dashboard', icon: LayoutDashboard, path: '/admin' },
 ];

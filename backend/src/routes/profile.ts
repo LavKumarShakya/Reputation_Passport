@@ -1,5 +1,6 @@
-import { Router, Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import User from '../models/User';
+import bcrypt from 'bcryptjs';
 import Credential from '../models/Credential';
 import Achievement from '../models/Achievement';
 import axios from 'axios';
@@ -165,6 +166,10 @@ router.patch('/', authenticate, async (req: AuthRequest, res: Response) => {
                 return;
             }
             updates.handle = handle;
+        }
+        
+        if (req.body.password) {
+            updates.password = await bcrypt.hash(req.body.password, 12);
         }
 
         const user = await User.findByIdAndUpdate(

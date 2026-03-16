@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DynamicNFTCard } from '@/components/DynamicNFTCard';
 import { ReputationStrip } from '@/components/ReputationPill';
+import { Button } from '@/components/ui/button';
 import { ReputationGraph } from '@/components/ReputationGraph';
 import { Timeline } from '@/components/Timeline';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,15 +17,21 @@ import {
   Globe,
   ExternalLink,
   Zap,
-  Binary
+  Binary,
+  LogOut,
+  Sparkles,
+  ArrowRight,
+  X
 } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ProfilePage() {
   const { id } = useParams();
-  const { user: authUser } = useAuth();
+  const { user: authUser, logout } = useAuth();
+  const [showSetupPrompt, setShowSetupPrompt] = useState(true);
+  const navigate = useNavigate();
 
   // Use the ID from the URL, or 'me' if not present, then fall back to authUser's ID
   const profileId = id || authUser?.id || authUser?.walletAddress || '';
@@ -83,6 +91,48 @@ export default function ProfilePage() {
         <div className="fixed inset-0 pointer-events-none z-0 bg-grain mix-blend-overlay opacity-30" />
         
         <div className="container mx-auto px-6 py-12 lg:py-20 relative z-10 max-w-7xl">
+          {/* Setup Prompt */}
+          <AnimatePresence>
+            {showSetupPrompt && (!id || id === 'me') && (userToDisplay.handle === 'addr.unknown' || !userToDisplay.displayName || userToDisplay.displayName === 'UNNAMED NODE') && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="mb-12 border-l-4 border-l-primary bg-primary/5 p-6 relative overflow-hidden group"
+              >
+                <div className="absolute top-0 right-0 p-2 text-[10px] font-mono uppercase tracking-[0.2em] text-primary/30 group-hover:text-primary transition-colors">
+                  Action Required
+                </div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 shrink-0 bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                      <Sparkles className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-heading text-xl font-bold uppercase tracking-tight text-foreground">Identity Uninitialized</h3>
+                      <p className="text-muted-foreground mt-1 max-w-lg">
+                        Your sovereign passport is in a partial state. Initialize your node variables to anchor your reputation on the global index.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      onClick={() => navigate('/onboarding')}
+                      className="rounded-none bg-primary text-primary-foreground font-bold uppercase tracking-widest px-6 h-12"
+                    >
+                      Begin Onboarding <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <button 
+                      onClick={() => setShowSetupPrompt(false)}
+                      className="h-12 w-12 flex items-center justify-center border border-border/50 text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           {/* Top Editorial Header */}
           <div className="mb-16 border-b-2 border-border/40 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -108,6 +158,16 @@ export default function ProfilePage() {
                   <span className="h-1.5 w-1.5 bg-accent rounded-full animate-pulse-icon" /> {uptime}
                 </span>
               </div>
+              
+              {(!id || id === 'me' || id === authUser?.handle) && (
+                <Button 
+                  variant="ghost" 
+                  onClick={logout}
+                  className="ml-4 h-11 px-4 border border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 rounded-none font-mono text-[10px] uppercase tracking-widest gap-2"
+                >
+                  <LogOut className="h-3 w-3" /> Terminate Session
+                </Button>
+              )}
             </div>
           </div>
 

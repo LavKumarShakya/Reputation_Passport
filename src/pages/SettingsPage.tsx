@@ -3,7 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { 
   User, Link2, Eye, Shield, Wallet, Bell, 
-  Trash2, ExternalLink, Check, Github, Mail, Activity, Key, Cpu
+  Trash2, ExternalLink, Check, Github, Mail, Activity, Key, Cpu, LogOut
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,14 +12,18 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('account');
   
   const [formData, setFormData] = useState({
-    displayName: '',
     email: '',
     handle: ''
+  });
+
+  const [securityData, setSecurityData] = useState({
+    newPassword: '',
+    confirmPassword: ''
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -88,6 +92,56 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSecuritySave = async () => {
+    if (!securityData.newPassword) {
+      toast({
+        title: 'Input Required',
+        description: 'Please define a new security protocol (password).',
+      });
+      return;
+    }
+    if (securityData.newPassword !== securityData.confirmPassword) {
+      toast({
+        title: 'Entropy Mismatch',
+        description: 'Password confirmation does not match the primary protocol.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await api.patch('/profile', { password: securityData.newPassword });
+      toast({
+        title: 'Security Protocol Updated',
+        description: 'Your local credential bridge has been established.',
+      });
+      setSecurityData({ newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      toast({
+        title: 'Sync Failed',
+        description: error.response?.data?.error || 'System error during protocol update.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleConnect = (source: string) => {
+    if (source === 'github') {
+      if (user?.connectedProviders?.github) {
+        toast({
+          title: 'Already Connected',
+          description: 'Your GitHub architecture is already bridged.',
+        });
+        return;
+      }
+      const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      window.location.href = `${backendUrl}/api/auth/github`;
+    }
+  };
+
   const tabs = [
     { id: 'account', label: 'Identity Matrix', icon: User },
     { id: 'connections', label: 'Network Bridges', icon: Link2 },
@@ -119,9 +173,19 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex flex-col md:items-end gap-4">
-              <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-2 border border-border/50 px-3 py-1.5 bg-secondary/10">
-                <Cpu className="h-4 w-4" /> 
-                System Parameters
+              <div className="flex items-center gap-4">
+                <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-2 border border-border/50 px-3 py-1.5 bg-secondary/10">
+                  <Cpu className="h-4 w-4" /> 
+                  System Parameters
+                </div>
+                
+                <Button 
+                  variant="ghost" 
+                  onClick={logout}
+                  className="h-9 px-4 border border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 rounded-none font-mono text-[10px] uppercase tracking-widest gap-2"
+                >
+                  <LogOut className="h-3 w-3" /> Terminate Session
+                </Button>
               </div>
             </div>
           </div>
@@ -270,11 +334,12 @@ export default function SettingsPage() {
                         )}
                         <Button 
                           variant={connection.connected ? 'outline' : 'hero'} 
+                          onClick={() => !connection.connected && handleConnect(connection.name.toLowerCase().split(' ')[0])}
                           className={cn("rounded-none font-bold uppercase tracking-widest h-10 w-full sm:w-auto", 
                              connection.connected ? "border-border hover:bg-destructive hover:text-destructive-foreground hover:border-destructive" : ""
                           )}
                         >
-                          {connection.connected ? 'VIEW SOURCE' : 'BRIDGE'}
+                          {connection.connected ? 'SOURCE ACTIVE' : 'BRIDGE'}
                         </Button>
                       </div>
                     </div>
@@ -362,7 +427,57 @@ export default function SettingsPage() {
                 </motion.div>
               )}
 
-              {(activeTab === 'privacy' || activeTab === 'notifications' || activeTab === 'security') && (
+              {activeTab === 'security' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="max-w-2xl space-y-12"
+                >
+                  <section>
+                    <div className="mb-6 flex items-center gap-3">
+                      <Shield className="h-5 w-5 text-primary" />
+                      <h2 className="font-heading text-2xl font-bold uppercase tracking-wider">Protocol Defense</h2>
+                    </div>
+                    
+                    <p className="font-mono text-xs text-muted-foreground uppercase mb-8 leading-relaxed">
+                      Establish a local credential bridge to enable password-based resolution alongside your network provider.
+                    </p>
+
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">New Security Key (Password)</label>
+                        <input
+                          type="password"
+                          value={securityData.newPassword}
+                          onChange={(e) => setSecurityData({ ...securityData, newPassword: e.target.value })}
+                          className="h-14 w-full rounded-none border border-border bg-secondary/10 px-4 font-mono text-sm focus:border-primary focus:bg-background focus:outline-none transition-colors"
+                          placeholder="••••••••••••"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Confirm Security Key</label>
+                        <input
+                          type="password"
+                          value={securityData.confirmPassword}
+                          onChange={(e) => setSecurityData({ ...securityData, confirmPassword: e.target.value })}
+                          className="h-14 w-full rounded-none border border-border bg-secondary/10 px-4 font-mono text-sm focus:border-primary focus:bg-background focus:outline-none transition-colors"
+                          placeholder="••••••••••••"
+                        />
+                      </div>
+                      <Button 
+                        variant="hero" 
+                        onClick={handleSecuritySave}
+                        disabled={isSaving}
+                        className="rounded-none h-14 px-8 font-bold uppercase tracking-widest w-full sm:w-auto"
+                      >
+                        {isSaving ? 'Encrypting...' : 'Update Protocol'}
+                      </Button>
+                    </div>
+                  </section>
+                </motion.div>
+              )}
+
+              {(activeTab === 'privacy' || activeTab === 'notifications') && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -377,7 +492,6 @@ export default function SettingsPage() {
                     </div>
                     {activeTab === 'privacy' && <Eye className="h-6 w-6 text-muted-foreground/30" />}
                     {activeTab === 'notifications' && <Bell className="h-6 w-6 text-muted-foreground/30" />}
-                    {activeTab === 'security' && <Shield className="h-6 w-6 text-muted-foreground/30" />}
                   </div>
 
                   <div className="space-y-6">

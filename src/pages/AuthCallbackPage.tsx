@@ -15,6 +15,7 @@ export default function AuthCallbackPage() {
         const displayName = searchParams.get('displayName');
         const handle = searchParams.get('handle');
         const avatar = searchParams.get('avatar');
+        const walletAddress = searchParams.get('walletAddress');
         const errorCode = searchParams.get('error');
 
         if (token) {
@@ -22,11 +23,13 @@ export default function AuthCallbackPage() {
             localStorage.setItem('auth_token', token);
 
             // Store basic user info for immediate use
+            // Note: We don't store connectedProviders here; useAuth will fetch the full profile
             localStorage.setItem('auth_user', JSON.stringify({
                 id: userId,
                 displayName,
                 handle,
                 avatar,
+                walletAddress,
             }));
 
             // Redirect to profile with a hard reload to ensure `useAuth` hook natively picks up the new localStorage values

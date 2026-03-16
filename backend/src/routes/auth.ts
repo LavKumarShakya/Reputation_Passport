@@ -40,7 +40,23 @@ router.post('/register', async (req: Request, res: Response) => {
             expiresIn: (process.env.JWT_EXPIRES_IN as any) || '7d',
         });
 
-        res.status(201).json({ user: { id: user._id, displayName, handle, email }, token });
+        res.status(201).json({ 
+            user: { 
+                id: user._id, 
+                displayName: user.displayName, 
+                handle: user.handle, 
+                email: user.email,
+                walletAddress: user.walletAddress,
+                avatar: user.avatar,
+                reputationScore: user.reputationScore,
+                tier: user.tier,
+                connectedProviders: user.connectedProviders,
+                techStack: user.techStack,
+                verified: user.verified,
+                createdAt: user.createdAt
+            }, 
+            token 
+        });
     } catch (error) {
         res.status(500).json({ error: 'Registration failed' });
     }
@@ -49,11 +65,14 @@ router.post('/register', async (req: Request, res: Response) => {
 // POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
     try {
-        const { email, password } = req.body;
+        const { email: handleOrEmail, password } = req.body;
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({
+            $or: [{ email: handleOrEmail }, { handle: handleOrEmail }]
+        });
+
         if (!user || !user.password) {
-            res.status(401).json({ error: 'Invalid credentials' });
+            res.status(401).json({ error: 'Invalid credentials or no password set for this account' });
             return;
         }
 
@@ -67,7 +86,23 @@ router.post('/login', async (req: Request, res: Response) => {
             expiresIn: (process.env.JWT_EXPIRES_IN as any) || '7d',
         });
 
-        res.json({ user: { id: user._id, displayName: user.displayName, handle: user.handle }, token });
+        res.json({ 
+            user: { 
+                id: user._id, 
+                displayName: user.displayName, 
+                handle: user.handle,
+                email: user.email,
+                walletAddress: user.walletAddress,
+                avatar: user.avatar,
+                reputationScore: user.reputationScore,
+                tier: user.tier,
+                connectedProviders: user.connectedProviders,
+                techStack: user.techStack,
+                verified: user.verified,
+                createdAt: user.createdAt
+            }, 
+            token 
+        });
     } catch (error) {
         res.status(500).json({ error: 'Login failed' });
     }
@@ -101,7 +136,23 @@ router.post('/wallet', async (req: Request, res: Response) => {
             expiresIn: '7d',
         });
 
-        res.json({ user: { id: user._id, walletAddress: user.walletAddress }, token });
+        res.json({ 
+            user: { 
+                id: user._id, 
+                displayName: user.displayName,
+                handle: user.handle,
+                email: user.email,
+                walletAddress: user.walletAddress,
+                avatar: user.avatar,
+                tier: user.tier,
+                reputationScore: user.reputationScore,
+                connectedProviders: user.connectedProviders,
+                techStack: user.techStack,
+                verified: user.verified,
+                createdAt: user.createdAt
+            }, 
+            token 
+        });
     } catch (error) {
         res.status(500).json({ error: 'Wallet auth failed' });
     }
@@ -304,8 +355,10 @@ router.get('/github/callback', async (req: Request, res: Response) => {
         });
 
         // Redirect to frontend with the token — frontend will store it
+        // We also send back if GitHub is connected (which it obviously is here)
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        res.redirect(`${frontendUrl}/auth/callback?token=${token}&userId=${user._id}&displayName=${encodeURIComponent(user.displayName)}&handle=${user.handle}&avatar=${encodeURIComponent(user.avatar)}`);
+        // Send a minimal set but enough to trigger immediate UI
+        res.redirect(`${frontendUrl}/auth/callback?token=${token}&userId=${user._id}&displayName=${encodeURIComponent(user.displayName)}&handle=${user.handle}&avatar=${encodeURIComponent(user.avatar)}&walletAddress=${user.walletAddress || ''}`);
     } catch (error: any) {
         console.error('\n\n################################################################');
         console.error('#################### GITHUB OAUTH ERROR ########################');
@@ -359,6 +412,11 @@ router.post('/mock-wallet', async (req: Request, res: Response) => {
                 avatar: user.avatar,
                 reputationScore: user.reputationScore,
                 tier: user.tier,
+                connectedProviders: user.connectedProviders,
+                techStack: user.techStack,
+                email: user.email,
+                verified: user.verified,
+                createdAt: user.createdAt
             },
             token,
         });

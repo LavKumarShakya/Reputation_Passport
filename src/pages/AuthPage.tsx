@@ -6,7 +6,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-type AuthMethod = 'wallet' | 'github' | 'google' | null;
+type AuthMethod = 'wallet' | 'github' | 'google' | 'credentials' | null;
 
 const GITHUB_ERROR_MESSAGES: Record<string, string> = {
   no_token: 'GitHub login did not return a valid session token. Please try again.',
@@ -22,7 +22,10 @@ export default function AuthPage() {
   const [mockAddress, setMockAddress] = useState('');
   const [mockError, setMockError] = useState('');
   const [githubError, setGithubError] = useState<string | null>(null);
-  const { isLoading, loginWithWallet, loginWithGitHub, loginWithGoogle, loginWithMockWallet } = useAuth();
+  const [credentialsEmail, setCredentialsEmail] = useState('');
+  const [credentialsPassword, setCredentialsPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const { user, isLoading, loginWithWallet, loginWithGitHub, loginWithGoogle, loginWithMockWallet, loginWithPassword } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -63,8 +66,25 @@ export default function AuthPage() {
         case 'google':
           await loginWithGoogle();
           break;
+        case 'credentials': {
+          const result = await loginWithPassword(credentialsEmail, credentialsPassword);
+          if (result.success) {
+            const targetPath = (!result.user?.handle || result.user.handle === 'addr.unknown' || !result.user.displayName || result.user.displayName === 'UNNAMED NODE') 
+              ? '/onboarding' 
+              : '/profile';
+            navigate(targetPath);
+            return;
+          } else {
+            setAuthError(result.error || 'Identity verification failed.');
+            setSelectedMethod(null);
+            return;
+          }
+        }
       }
-      navigate('/profile');
+      const targetPath = (!user?.handle || user.handle === 'addr.unknown' || !user.displayName || user.displayName === 'UNNAMED NODE') 
+        ? '/onboarding' 
+        : '/profile';
+      navigate(targetPath);
     } catch (error) {
       console.error('Login failed:', error);
       setGithubError('An unexpected error occurred. Please try again.');
@@ -81,7 +101,10 @@ export default function AuthPage() {
     setMockError('');
     const result = await loginWithMockWallet(walletAddr);
     if (result.success) {
-      navigate('/profile');
+      const targetPath = (!result.user?.handle || result.user.handle === 'addr.unknown' || !result.user.displayName || result.user.displayName === 'UNNAMED NODE') 
+        ? '/onboarding' 
+        : '/profile';
+      navigate(targetPath);
     } else {
       setMockError(result.error || 'Login failed');
     }
@@ -116,6 +139,13 @@ export default function AuthPage() {
       desc: 'Anchor fundamental identity layer',
       icon: Mail,
       imports: ['Email', 'Profile', 'Certs'],
+    },
+    {
+      id: 'credentials' as const,
+      title: 'Credential Login',
+      desc: 'Direct access via handle & password',
+      icon: Shield,
+      imports: ['Username', 'Email', 'Local Password'],
     },
   ];
 
@@ -180,11 +210,11 @@ export default function AuthPage() {
               </h1>
             </div>
 
-            {/* GitHub OAuth Error Popup */}
+            {/* Error Popups */}
             <AnimatePresence>
-              {githubError && (
+              {(githubError || authError) && (
                 <motion.div
-                  key="github-error"
+                  key="auth-error"
                   initial={{ opacity: 0, y: -12, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -8, scale: 0.97 }}
@@ -194,11 +224,11 @@ export default function AuthPage() {
                 >
                   <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
                   <div className="flex-1">
-                    <p className="font-heading text-sm font-bold uppercase tracking-wide text-destructive">GitHub Login Failed</p>
-                    <p className="mt-1 font-mono text-xs text-destructive/80">{githubError}</p>
+                    <p className="font-heading text-sm font-bold uppercase tracking-wide text-destructive">Verification Failure</p>
+                    <p className="mt-1 font-mono text-xs text-destructive/80">{githubError || authError}</p>
                   </div>
                   <button
-                    onClick={() => setGithubError(null)}
+                    onClick={() => { setGithubError(null); setAuthError(null); }}
                     aria-label="Dismiss error"
                     className="ml-auto shrink-0 text-destructive/60 hover:text-destructive transition-colors"
                   >
@@ -217,41 +247,109 @@ export default function AuthPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * i + 0.3 }}
                 >
-                  <button
-                    onClick={() => handleLogin(method.id)}
-                    disabled={isLoading}
-                    className="group w-full text-left relative overflow-hidden"
+                  <div
+                    onClick={() => {
+                      if (method.id === 'credentials') {
+                        setSelectedMethod(selectedMethod === 'credentials' ? null : 'credentials');
+                      } else {
+                        handleLogin(method.id);
+                      }
+                    }}
+                    className={cn(
+                      "group w-full text-left relative overflow-hidden cursor-pointer",
+                      isLoading && selectedMethod !== method.id && "opacity-50 pointer-events-none"
+                    )}
                   >
-                    <div className="glass rounded-none p-6 border border-border/50 hover:border-primary/50 transition-colors duration-300 relative z-10">
+                    <div className={cn(
+                      "glass rounded-none p-6 border transition-colors duration-300 relative z-10",
+                      selectedMethod === method.id ? "border-primary bg-primary/5" : "border-border/50 hover:border-primary/50"
+                    )}>
                       <div className="flex items-start md:items-center justify-between gap-4">
                         <div className="flex items-center gap-5">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-secondary/50 group-hover:bg-primary/10 transition-colors">
-                            {isLoading && selectedMethod === method.id ? (
-                              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                          <div className={cn(
+                            "flex h-12 w-12 shrink-0 items-center justify-center transition-colors",
+                            selectedMethod === method.id ? "bg-primary text-primary-foreground" : "bg-secondary/50 group-hover:bg-primary/10"
+                          )}>
+                            {isLoading && selectedMethod === method.id && method.id !== 'credentials' ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
                             ) : (
-                              <method.icon className="h-5 w-5 text-foreground group-hover:text-primary transition-colors" />
+                              <method.icon className={cn(
+                                "h-5 w-5 transition-colors",
+                                selectedMethod === method.id ? "text-primary-foreground" : "group-hover:text-primary"
+                              )} />
                             )}
                           </div>
 
                           <div>
-                            <h3 className="font-heading text-xl font-bold uppercase tracking-wide group-hover:text-primary transition-colors">{method.title}</h3>
+                            <h3 className={cn(
+                              "font-heading text-xl font-bold uppercase tracking-wide transition-colors",
+                              selectedMethod === method.id ? "text-primary" : "group-hover:text-primary"
+                            )}>{method.title}</h3>
                             <p className="text-sm text-muted-foreground font-medium mt-1">{method.desc}</p>
                           </div>
                         </div>
 
-                        <ChevronRight className="hidden md:block h-6 w-6 text-muted-foreground/50 transition-transform group-hover:translate-x-2 group-hover:text-primary" />
+                        <ChevronRight className={cn(
+                          "hidden md:block h-6 w-6 transition-transform group-hover:translate-x-2",
+                          selectedMethod === method.id ? "rotate-90 text-primary" : "text-muted-foreground/50"
+                        )} />
                       </div>
 
-                      {/* Imported scopes */}
-                      <div className="mt-5 flex flex-wrap gap-2 md:pl-[68px]">
-                        {method.imports.map(item => (
-                          <span key={item} className="font-mono text-[10px] uppercase tracking-wider bg-background/50 border border-border/50 px-2 py-1 text-muted-foreground">
-                            {item}
-                          </span>
-                        ))}
-                      </div>
+                      {/* Credential Form */}
+                      <AnimatePresence>
+                        {method.id === 'credentials' && selectedMethod === 'credentials' && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-6 space-y-4 border-t border-primary/20 pt-6"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="space-y-4">
+                              <div className="space-y-1">
+                                <label className="font-mono text-[10px] uppercase font-bold text-muted-foreground">GitHub Handle or Email</label>
+                                <input
+                                  type="text"
+                                  value={credentialsEmail}
+                                  onChange={(e) => setCredentialsEmail(e.target.value)}
+                                  placeholder="lavkumar"
+                                  className="h-10 w-full rounded-none border border-border bg-background px-3 font-mono text-sm focus:border-primary focus:outline-none"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="font-mono text-[10px] uppercase font-bold text-muted-foreground">Security Key (Password)</label>
+                                <input
+                                  type="password"
+                                  value={credentialsPassword}
+                                  onChange={(e) => setCredentialsPassword(e.target.value)}
+                                  placeholder="••••••••"
+                                  className="h-10 w-full rounded-none border border-border bg-background px-3 font-mono text-sm focus:border-primary focus:outline-none"
+                                />
+                              </div>
+                              <Button
+                                onClick={() => handleLogin('credentials')}
+                                disabled={isLoading}
+                                className="w-full h-12 rounded-none bg-primary font-bold uppercase tracking-widest"
+                              >
+                                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : 'Authorize Local Bridge'}
+                              </Button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Imported Scopes */}
+                      {(!selectedMethod || selectedMethod !== method.id) && (
+                        <div className="mt-5 flex flex-wrap gap-2 md:pl-[68px]">
+                          {method.imports.map(item => (
+                            <span key={item} className="font-mono text-[10px] uppercase tracking-wider bg-background/50 border border-border/50 px-2 py-1 text-muted-foreground">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 </motion.div>
               ))}
             </div>

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import api from '@/lib/api';
 
 export interface User {
@@ -8,6 +8,15 @@ export interface User {
   email?: string;
   walletAddress?: string;
   avatar?: string;
+  reputationScore?: number;
+  tier?: string;
+  techStack?: Record<string, number>;
+  connectedProviders?: {
+    github?: { id: string; username: string; accessToken: string };
+    google?: { id: string; email: string };
+  };
+  verified?: boolean;
+  createdAt?: string;
 }
 
 interface AuthState {
@@ -40,6 +49,7 @@ export function useAuth() {
       const response = await api.post('/auth/login', { email, password });
       const { user, token } = response.data;
       localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
 
       setState({
         isAuthenticated: true,
@@ -47,7 +57,7 @@ export function useAuth() {
         isLoading: false,
         authMethod: 'password',
       });
-      return { success: true };
+      return { success: true, user };
     } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
       return { success: false, error: error.response?.data?.error || 'Login failed' };
@@ -60,6 +70,7 @@ export function useAuth() {
       const response = await api.post('/auth/wallet', { walletAddress, signature, message });
       const { user, token } = response.data;
       localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
 
       setState({
         isAuthenticated: true,
@@ -67,7 +78,7 @@ export function useAuth() {
         isLoading: false,
         authMethod: 'wallet',
       });
-      return { success: true };
+      return { success: true, user };
     } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
       return { success: false, error: 'Wallet verification failed' };
@@ -76,6 +87,7 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
     setState({
       isAuthenticated: false,
       user: null,
@@ -94,6 +106,7 @@ export function useAuth() {
       const response = await api.post('/auth/mock-wallet', { walletAddress });
       const { user, token } = response.data;
       localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
 
       setState({
         isAuthenticated: true,
@@ -101,12 +114,41 @@ export function useAuth() {
         isLoading: false,
         authMethod: 'wallet',
       });
-      return { success: true };
+      return { success: true, user };
     } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
       return { success: false, error: error.response?.data?.error || 'Mock wallet login failed' };
     }
   }, []);
+
+  const refreshUser = useCallback(async () => {
+    if (!state.isAuthenticated) return;
+    try {
+      const response = await api.get('/profile/me');
+      const userData = response.data.user || response.data;
+      const refreshedUser = {
+        ...userData,
+        id: userData._id || userData.id
+      };
+      
+      localStorage.setItem('auth_user', JSON.stringify(refreshedUser));
+      setState(prev => ({ ...prev, user: refreshedUser }));
+    } catch (err) {
+      console.error('Failed to refresh user session', err);
+    }
+  }, [state.isAuthenticated]);
+
+  useEffect(() => {
+    // Proactive refresh: if authenticated but missing critical metadata, fetch full profile
+    const needsRefresh = state.isAuthenticated && (
+      !state.user?.id || 
+      (state.user?.email && !state.user?.handle)
+    );
+
+    if (needsRefresh) {
+      refreshUser();
+    }
+  }, [state.isAuthenticated, refreshUser, state.user]);
 
   return {
     ...state,
@@ -116,5 +158,6 @@ export function useAuth() {
     loginWithGitHub,
     loginWithGoogle,
     logout,
+    refreshUser,
   };
 }
