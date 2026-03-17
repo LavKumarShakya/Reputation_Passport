@@ -3,7 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { 
   User, Link2, Eye, Shield, Wallet, Bell, 
-  Trash2, ExternalLink, Check, Github, Mail, Activity, Key, Cpu, LogOut
+  Trash2, ExternalLink, Check, Github, Mail, Activity, Key, Cpu, LogOut, AlertTriangle
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('account');
   
   const [formData, setFormData] = useState({
+    displayName: '',
     email: '',
     handle: ''
   });
@@ -62,6 +63,33 @@ export default function SettingsPage() {
   };
 
   const [isPurging, setIsPurging] = useState(false);
+  const [isTerminating, setIsTerminating] = useState(false);
+
+  const handleTerminateAllSessions = async () => {
+    if (!window.confirm('This will log you out from ALL devices and browsers immediately. Continue?')) {
+      return;
+    }
+    setIsTerminating(true);
+    try {
+      await api.post('/auth/logout-all');
+      toast({
+        title: 'All Sessions Terminated',
+        description: 'You have been logged out from every device.',
+        variant: 'destructive'
+      });
+      // Clear local session and redirect to auth
+      logout();
+      window.location.href = '/auth';
+    } catch (error: any) {
+      toast({
+        title: 'Termination Failed',
+        description: error.response?.data?.error || 'System error during session purge.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsTerminating(false);
+    }
+  };
 
   const handlePurge = async () => {
     if (!window.confirm('CRITICAL: This will irreversibly destroy your identity matrix and all associated artifacts. Are you absolutely sure?')) {
@@ -266,6 +294,25 @@ export default function SettingsPage() {
                     </div>
                   </section>
 
+                  <section className="border border-orange-500/30 bg-orange-500/5 p-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-2 h-full bg-orange-500/50" />
+                    <h2 className="font-heading text-xl font-bold uppercase tracking-wider text-orange-500 flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-5 w-5" /> Terminate Session
+                    </h2>
+                    <p className="font-mono text-xs text-muted-foreground mb-6 max-w-md">
+                      Immediately invalidate all active sessions across every device and browser. You will be required to log in again everywhere.
+                    </p>
+                    <Button 
+                      variant="outline"
+                      onClick={handleTerminateAllSessions}
+                      disabled={isTerminating}
+                      className="rounded-none font-bold uppercase tracking-widest h-12 border-orange-500/50 text-orange-500 hover:bg-orange-500 hover:text-white hover:border-orange-500 gap-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {isTerminating ? 'Terminating All Sessions...' : 'Terminate All Sessions'}
+                    </Button>
+                  </section>
+
                   <section className="border border-destructive/30 bg-destructive/5 p-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-2 h-full bg-destructive/50" />
                     <h2 className="font-heading text-xl font-bold uppercase tracking-wider text-destructive flex items-center gap-2 mb-2">
@@ -304,13 +351,17 @@ export default function SettingsPage() {
                       name: 'GitHub Architecture', 
                       icon: Github, 
                       connected: !!(user?.connectedProviders as any)?.github, 
-                      lastSync: (user?.connectedProviders as any)?.github?.username?.toUpperCase() || 'NULL' 
+                      lastSync: (user?.connectedProviders as any)?.github?.username?.toUpperCase() || 'NULL',
+                      // GitHub is auto-bridged via OAuth login — if connected it was bridged automatically
+                      autoBridged: !!(user?.connectedProviders as any)?.github,
                     },
                     { 
                       name: 'Wallet Protocol', 
                       icon: Wallet, 
                       connected: !!user?.walletAddress, 
-                      lastSync: user?.walletAddress ? `${user.walletAddress.substring(0, 6)}...${user.walletAddress.substring(38)}` : 'NULL' 
+                      lastSync: user?.walletAddress ? `${user.walletAddress.substring(0, 6)}...${user.walletAddress.substring(38)}` : 'NULL',
+                      // Wallet requires manual connection step
+                      autoBridged: false,
                     },
                   ].map(connection => (
                     <div key={connection.name} className="flex flex-col sm:flex-row sm:items-center justify-between border border-border/50 bg-background p-4 group hover:border-primary/50 transition-colors">
@@ -339,7 +390,9 @@ export default function SettingsPage() {
                              connection.connected ? "border-border hover:bg-destructive hover:text-destructive-foreground hover:border-destructive" : ""
                           )}
                         >
-                          {connection.connected ? 'SOURCE ACTIVE' : 'BRIDGE'}
+                          {connection.connected
+                            ? (connection.autoBridged ? 'BRIDGE' : 'BRIDGE')
+                            : 'CONNECT'}
                         </Button>
                       </div>
                     </div>

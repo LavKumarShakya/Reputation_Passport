@@ -36,9 +36,11 @@ router.post('/register', async (req: Request, res: Response) => {
             avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${handle}`,
         });
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
-            expiresIn: (process.env.JWT_EXPIRES_IN as any) || '7d',
-        });
+        const token = jwt.sign(
+            { userId: user._id, tokenVersion: user.tokenVersion ?? 0 },
+            process.env.JWT_SECRET as string,
+            { expiresIn: (process.env.JWT_EXPIRES_IN as any) || '7d' }
+        );
 
         res.status(201).json({ 
             user: { 
@@ -82,9 +84,11 @@ router.post('/login', async (req: Request, res: Response) => {
             return;
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
-            expiresIn: (process.env.JWT_EXPIRES_IN as any) || '7d',
-        });
+        const token = jwt.sign(
+            { userId: user._id, tokenVersion: user.tokenVersion ?? 0 },
+            process.env.JWT_SECRET as string,
+            { expiresIn: (process.env.JWT_EXPIRES_IN as any) || '7d' }
+        );
 
         res.json({ 
             user: { 
@@ -132,9 +136,11 @@ router.post('/wallet', async (req: Request, res: Response) => {
             });
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
-            expiresIn: '7d',
-        });
+        const token = jwt.sign(
+            { userId: user._id, tokenVersion: user.tokenVersion ?? 0 },
+            process.env.JWT_SECRET as string,
+            { expiresIn: '7d' }
+        );
 
         res.json({ 
             user: { 
@@ -164,6 +170,11 @@ router.get('/github', (req: Request, res: Response) => {
     githubUrl.searchParams.set('client_id', process.env.GITHUB_CLIENT_ID || '');
     githubUrl.searchParams.set('redirect_uri', `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/github/callback`);
     githubUrl.searchParams.set('scope', 'read:user user:email');
+    // Force GitHub to always show its login page so the user can pick a different account.
+    // Setting 'login' to empty string makes GitHub prompt for credentials instead of silently
+    // reusing the browser's cached GitHub session.
+    githubUrl.searchParams.set('login', '');
+    githubUrl.searchParams.set('allow_signup', 'true');
 
     console.log('Redirecting to GitHub:', githubUrl.toString());
     res.redirect(githubUrl.toString());
@@ -349,10 +360,12 @@ router.get('/github/callback', async (req: Request, res: Response) => {
             } catch (err) { }
         }
 
-        // Issue JWT
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
-            expiresIn: '7d',
-        });
+        // Issue JWT (includes tokenVersion so it can be invalidated globally)
+        const token = jwt.sign(
+            { userId: user._id, tokenVersion: user.tokenVersion ?? 0 },
+            process.env.JWT_SECRET as string,
+            { expiresIn: '7d' }
+        );
 
         // Redirect to frontend with the token — frontend will store it
         // We also send back if GitHub is connected (which it obviously is here)
@@ -399,9 +412,11 @@ router.post('/mock-wallet', async (req: Request, res: Response) => {
             return;
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
-            expiresIn: '7d',
-        });
+        const token = jwt.sign(
+            { userId: user._id, tokenVersion: user.tokenVersion ?? 0 },
+            process.env.JWT_SECRET as string,
+            { expiresIn: '7d' }
+        );
 
         res.json({
             user: {
@@ -422,6 +437,17 @@ router.post('/mock-wallet', async (req: Request, res: Response) => {
         });
     } catch (error) {
         res.status(500).json({ error: 'Mock wallet auth failed' });
+    }
+});
+
+// POST /api/auth/logout-all — Increment tokenVersion to invalidate ALL active sessions for this user
+import { authenticate, AuthRequest } from '../middleware/auth';
+router.post('/logout-all', authenticate, async (req: AuthRequest, res: Response) => {
+    try {
+        await User.findByIdAndUpdate(req.userId, { $inc: { tokenVersion: 1 } });
+        res.json({ message: 'All sessions terminated. Please log in again.' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to terminate sessions.' });
     }
 });
 

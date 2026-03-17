@@ -7,9 +7,11 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { ReputationIndicator } from '@/components/ReputationIndicator';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -47,11 +49,20 @@ export default function LandingPage() {
             </Link>
             <div className="h-4 w-px bg-border/50 hidden md:block" />
             <ThemeToggle />
-            <Link to="/auth">
-              <Button size="sm" className="h-10 rounded-none bg-foreground text-background hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wider px-6 transition-all">
-                Enter App
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to="/home">
+                <Button size="sm" className="h-10 rounded-none bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wider px-6 transition-all gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground animate-pulse" />
+                  {user?.handle || 'Dashboard'}
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/auth">
+                <Button size="sm" className="h-10 rounded-none bg-foreground text-background hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wider px-6 transition-all">
+                  Enter App
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -81,10 +92,10 @@ export default function LandingPage() {
                   </p>
                   
                   <div className="flex flex-col items-start gap-6">
-                    <Link to="/auth">
+                    <Link to={isAuthenticated ? '/home' : '/auth'}>
                       <Button size="xl" className="h-14 px-8 rounded-none bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-bold uppercase tracking-widest group relative overflow-hidden">
                         <span className="relative z-10 flex items-center gap-2">
-                          Initialize Passport
+                          {isAuthenticated ? 'Go to Dashboard' : 'Initialize Passport'}
                           <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                         </span>
                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />

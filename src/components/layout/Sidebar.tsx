@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const navItems = [
-  { title: 'Home', icon: Home, path: '/' },
+  { title: 'Home', icon: Home, path: '/home' },
   { title: 'Profile', icon: User, path: '/profile' },
   { title: 'Achievements', icon: Trophy, path: '/achievements' },
   { title: 'Reputation Graph', icon: GitBranch, path: '/graph' },

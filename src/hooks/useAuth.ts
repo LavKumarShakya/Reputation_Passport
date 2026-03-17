@@ -142,7 +142,8 @@ export function useAuth() {
     // Proactive refresh: if authenticated but missing critical metadata, fetch full profile
     const needsRefresh = state.isAuthenticated && (
       !state.user?.id || 
-      (state.user?.email && !state.user?.handle)
+      (state.user?.email && !state.user?.handle) ||
+      state.user?.connectedProviders === undefined  // Fetch full profile if connectedProviders not yet loaded (e.g. after GitHub OAuth)
     );
 
     if (needsRefresh) {

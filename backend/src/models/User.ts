@@ -21,6 +21,7 @@ export interface IUser extends Document {
         endorsements: boolean;
     };
     verified: boolean;
+    tokenVersion: number;     // Incrementing this invalidates all existing JWTs
     createdAt: Date;
 }
 
@@ -45,6 +46,7 @@ const UserSchema = new Schema<IUser>({
         endorsements: { type: Boolean, default: true },
     },
     verified: { type: Boolean, default: false },
+    tokenVersion: { type: Number, default: 0 },
 }, { timestamps: true });
 
 export default mongoose.model<IUser>('User', UserSchema);
