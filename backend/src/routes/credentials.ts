@@ -32,7 +32,8 @@ router.post('/issue', authenticate, async (req: AuthRequest, res: Response) => {
         // Write hash on-chain
         let txHash: string | undefined;
         try {
-            txHash = await addCredentialOnChain(userWallet, hash, category);
+            const result = await addCredentialOnChain(userWallet, hash, category);
+            txHash = result ?? undefined;
         } catch (chainError) {
             console.error('On-chain write failed:', chainError);
             // Continue — save to DB even if on-chain fails (can retry later)
