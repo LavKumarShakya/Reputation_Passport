@@ -171,7 +171,7 @@ export function DynamicNFTCard({ user, onMint, onShare, onExport }: DynamicNFTCa
           <Download className="mr-2 h-4 w-4" /> Export
         </Button>
         <Button variant="hero" onClick={onMint} className="col-span-2 rounded-none font-bold uppercase tracking-widest h-12">
-          <ExternalLink className="mr-2 h-4 w-4" /> View On-Chain
+          <ExternalLink className="mr-2 h-4 w-4" /> Mint / View SBT
         </Button>
       </div>
 

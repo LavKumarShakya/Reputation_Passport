@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
+import { isBlockchainConfigured } from './services/blockchain';
 
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
@@ -33,7 +34,11 @@ app.use('/api/achievements', achievementRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        blockchain: isBlockchainConfigured() ? 'enabled' : 'disabled (database-only mode)',
+    });
 });
 
 // Start server

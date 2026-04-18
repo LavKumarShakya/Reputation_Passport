@@ -62,6 +62,61 @@ export default function ProfilePage() {
     );
   }
 
+  const handleMintSBT = async () => {
+    if (!authUser || !authUser.walletAddress) {
+      toast.error('Connect wallet to mint SBT');
+      return;
+    }
+    
+    if (userToDisplay.walletAddress !== authUser.walletAddress) {
+      toast.error('You can only mint your own passport');
+      return;
+    }
+    
+    // Only attempt contract interaction if ethereum is injected
+    if (!(window as any).ethereum) {
+      toast.error('No Web3 wallet detected. Please install MetaMask.');
+      return;
+    }
+    
+    try {
+      // Dynamic import to avoid early errors if not used
+      const { ethers } = await import('ethers');
+      const { getContract } = await import('@/lib/contract');
+      
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const contract = await getContract(signer);
+      
+      if (!contract) {
+        toast.error('Contract unavailable or mock mode active');
+        return;
+      }
+      
+      toast.loading('Initializing SBT minting...', { id: 'mint-sbt' });
+      
+      // Check if already minted
+      const hasMinted = await contract.hasMintedSBT(authUser.walletAddress);
+      if (hasMinted) {
+         toast.success('SBT already minted! View it on Opensea/Polygonscan', { id: 'mint-sbt' });
+         return;
+      }
+      
+      // Simple dynamic metadata URI structure
+      const uri = `ipfs://passport-metadata/${userToDisplay.handle}`;
+      
+      const tx = await contract.mintSBT(uri);
+      toast.loading('Confirming transaction... Please wait', { id: 'mint-sbt' });
+      
+      await tx.wait();
+      toast.success('SBT Minted Successfully! Your reputation is now soulbound.', { id: 'mint-sbt' });
+    } catch (error: any) {
+      console.error(error);
+      const msg = error?.reason || error?.message || 'Failed to mint SBT';
+      toast.error(`Mint Failed: ${msg}`, { id: 'mint-sbt' });
+    }
+  };
+
   const tierColors: Record<string, string> = {
     bronze: 'text-amber-500',
     silver: 'text-slate-300',
@@ -179,7 +234,7 @@ export default function ProfilePage() {
                 <DynamicNFTCard
                   user={userToDisplay as any}
                   onShare={() => toast.success('Profile link copied to clipboard')}
-                  onMint={() => toast.info('SBT Protocol Initialization pending...')}
+                  onMint={handleMintSBT}
                   onExport={() => toast.info('Data export compiling...')}
                 />
               </div>

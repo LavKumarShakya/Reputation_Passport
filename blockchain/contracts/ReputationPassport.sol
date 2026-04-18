@@ -1,26 +1,24 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title ReputationPassport
- * @notice Prototype smart contract for on-chain credential verification
+ * @notice Prototype smart contract for on-chain credential verification and SBT minting
  * 
  * ARCHITECTURE NOTES:
  * - This contract stores ONLY cryptographic hashes of credentials, not raw data
- * - Raw credential data is stored off-chain (simulated via JSON files in this prototype)
+ * - Raw credential data is stored off-chain
  * - Only whitelisted issuers can submit credential hashes
  * - Public verification allows anyone to check if a credential hash exists on-chain
- * 
- * SCALING PATH:
- * - Production: Replace JSON with IPFS/Arweave for off-chain storage
- * - Production: Add backend API for credential management
- * - This contract remains the source of truth for verification
+ * - Users can mint a Soulbound Token (SBT) representing their passport
  */
-contract ReputationPassport {
+contract ReputationPassport is ERC721URIStorage, Ownable {
     // ============ STATE VARIABLES ============
     
-    // Owner of the contract (can whitelist issuers)
-    address public owner;
+    uint256 private _nextTokenId;
     
     // Mapping: issuer address => is whitelisted
     mapping(address => bool) public issuers;
@@ -30,6 +28,9 @@ contract ReputationPassport {
     
     // Mapping: credential hash => credential details
     mapping(bytes32 => Credential) public credentials;
+    
+    // Mapping: user address => boolean if they have minted their SBT
+    mapping(address => bool) public hasMintedSBT;
     
     // ============ STRUCTS ============
     
@@ -47,6 +48,7 @@ contract ReputationPassport {
     // ============ EVENTS ============
     
     event IssuerAdded(address indexed issuer, address indexed addedBy);
+    event IssuerRemoved(address indexed issuer, address indexed removedBy);
     event CredentialAdded(
         address indexed user,
         address indexed issuer,
@@ -54,13 +56,9 @@ contract ReputationPassport {
         string category,
         uint256 timestamp
     );
+    event SBTMinted(address indexed user, uint256 tokenId, string uri);
     
     // ============ MODIFIERS ============
-    
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this");
-        _;
-    }
     
     modifier onlyIssuer() {
         require(issuers[msg.sender], "Only whitelisted issuers can call this");
@@ -69,10 +67,10 @@ contract ReputationPassport {
     
     // ============ CONSTRUCTOR ============
     
-    constructor() {
-        owner = msg.sender;
+    constructor() ERC721("Reputation Passport", "RPASS") {
         // Owner is automatically an issuer
         issuers[msg.sender] = true;
+        _nextTokenId = 1;
     }
     
     // ============ ISSUER MANAGEMENT ============
@@ -98,6 +96,7 @@ contract ReputationPassport {
     function removeIssuer(address issuer) external onlyOwner {
         require(issuers[issuer], "Issuer not whitelisted");
         issuers[issuer] = false;
+        emit IssuerRemoved(issuer, msg.sender);
     }
     
     // ============ CREDENTIAL MANAGEMENT ============
@@ -134,6 +133,44 @@ contract ReputationPassport {
         userCredentials[user].push(hash);
         
         emit CredentialAdded(user, msg.sender, hash, category, block.timestamp);
+    }
+    
+    // ============ SOULBOUND TOKEN (SBT) MANAGEMENT ============
+    
+    /**
+     * @notice Mint a Soulbound Token representing the user's reputation passport
+     * @dev Each user can only mint ONE token. The token is non-transferable.
+     * @param uri The metadata URI for the token (can point to dynamic API or IPFS)
+     */
+    function mintSBT(string memory uri) external {
+        require(!hasMintedSBT[msg.sender], "SBT already minted for this address");
+        
+        uint256 tokenId = _nextTokenId++;
+        hasMintedSBT[msg.sender] = true;
+        
+        _safeMint(msg.sender, tokenId);
+        _setTokenURI(tokenId, uri);
+        
+        emit SBTMinted(msg.sender, tokenId, uri);
+    }
+
+    /**
+     * @notice Overrides _beforeTokenTransfer from ERC721 to make tokens soulbound
+     * @dev Reverts if it's a transfer (from != 0 and to != 0)
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 firstTokenId,
+        uint256 batchSize
+    ) internal override {
+        // Allow minting (from == 0) or burning (to == 0)
+        // Disallow standard transfers
+        if (from != address(0) && to != address(0)) {
+            revert("Soulbound: Transfer failed");
+        }
+        
+        super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
     }
     
     // ============ VIEW FUNCTIONS ============
@@ -175,4 +212,3 @@ contract ReputationPassport {
         return userCredentials[user].length;
     }
 }
-

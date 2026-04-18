@@ -32,8 +32,11 @@ export const REPUTATION_PASSPORT_ABI = [
   "function credentialExists(bytes32 hash) view returns (bool)",
   "function getCredentialCount(address user) view returns (uint256)",
   "function issuers(address) view returns (bool)",
+  "function mintSBT(string memory uri)",
+  "function hasMintedSBT(address) view returns (bool)",
   "event CredentialAdded(address indexed user, address indexed issuer, bytes32 indexed hash, string category, uint256 timestamp)",
-  "event IssuerAdded(address indexed issuer, address indexed addedBy)"
+  "event IssuerAdded(address indexed issuer, address indexed addedBy)",
+  "event SBTMinted(address indexed user, uint256 tokenId, string uri)"
 ] as const;
 
 // TODO: Update with deployed contract address

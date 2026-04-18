@@ -1,5 +1,5 @@
-const { ethers } = require("hardhat");
-
+import hardhat from "hardhat";
+const { ethers } = hardhat;
 /**
  * @notice Deployment script for ReputationPassport contract
  * @dev Deploys to the network specified in hardhat.config.js

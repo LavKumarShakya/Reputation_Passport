@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: reputation-passport-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CONTRACT_ADDRESS
+        value: "-"   # Optional: set this when you deploy your smart contract
+      - key: PRIVATE_KEY
+        value: "-"   # Optional: your wallet's private key for on-chain writes
+      - key: POLYGON_AMOY_RPC_URL
+        value: https://rpc-amoy.polygon.technology
+      - key: FRONTEND_URL
+        sync: false
