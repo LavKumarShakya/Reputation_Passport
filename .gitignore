@@ -22,6 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+doc
 
 # Environment files
 .env
@@ -33,5 +34,5 @@ desc.md
 
 blockchain/compile_error.txt
 blockchain/out.txt
-
+presnopsis.md
 
