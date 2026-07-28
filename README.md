@@ -109,26 +109,26 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 ## 🏗 Architecture
 
 ```
-┌──────────────────────┐       ┌──────────────────────┐       ┌──────────────────┐
-│    FRONTEND          │       │    BACKEND            │       │   BLOCKCHAIN     │
-│                      │       │                       │       │                  │
-│  React 18 + TS       │       │  Express 5 + TS       │       │  Solidity ^0.8.24│
-│  Vite 5              │ REST  │  MongoDB (Mongoose)   │Ethers │  ERC-721 + SBT   │
-│  Tailwind + shadcn   │──────▶│  JWT + GitHub OAuth   │──────▶│  Whitelisted     │
-│  Framer Motion       │  API  │  SHA-256 Hashing      │  v6   │  Issuer Model    │
-│  Ethers.js v6        │       │  bcryptjs Auth        │       │  OpenZeppelin    │
-│                      │       │                       │       │                  │
-│  Vercel (hosting)    │       │  Render (hosting)     │       │  Polygon Amoy    │
-└──────────────────────┘       └──────────┬────────────┘       └──────────────────┘
+┌──────────────────────┐        ┌──────────────────────┐        ┌──────────────────┐
+│    FRONTEND          │        │    BACKEND           │        │   BLOCKCHAIN     │
+│                      │        │                      │        │                  │
+│  React 18 + TS       │        │  Express 5 + TS      │        │  Solidity ^0.8.24│
+│  Vite 5              │ REST   │  MongoDB (Mongoose)  │ Ethers │  ERC-721 + SBT   │
+│  Tailwind + shadcn   │──────▶│  JWT + GitHub OAuth  │ ──────▶│  Whitelisted     │
+│  Framer Motion       │  API   │  SHA-256 Hashing     │  v6    │  Issuer Model    │
+│  Ethers.js v6        │        │  bcryptjs Auth       │        │  OpenZeppelin    │
+│                      │        │                      │        │                  │
+│  Vercel (hosting)    │        │  Render (hosting)    │        │  Polygon Amoy    │
+└──────────────────────┘        └──────────┬───────────┘        └──────────────────┘
                                           │
                                 ┌─────────▼─────────┐
-                                │   MongoDB Atlas    │
-                                │   4 Collections    │
-                                │   Users            │
-                                │   Credentials      │
-                                │   Issuers          │
-                                │   Achievements     │
-                                └────────────────────┘
+                                │   MongoDB Atlas   │
+                                │   4 Collections   │
+                                │   Users           │
+                                │   Credentials     │
+                                │   Issuers         │
+                                │   Achievements    │
+                                └───────────────────┘
 ```
 
 **Data Distribution:**
@@ -570,7 +570,7 @@ Automated unit and integration test suites for the backend and frontend are desi
 ```
  Q3 2026            Q4 2026            Q1 2027            Q2 2027
 ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│  ✅ Alpha     │   │  ✅ Beta      │   │  📋 v1.0      │   │  📋 v2.0      │
+│  ✅ Alpha    │   │  ✅ Beta     │  │  📋 v1.0     │   │  📋 v2.0     │
 │              │   │              │   │              │   │              │
 │  Core auth   │   │  On-chain    │   │  SBT minting │   │  ZK proofs   │
 │  GitHub      │   │  verification│   │  Mainnet     │   │  Multi-chain │

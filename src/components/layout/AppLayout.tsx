@@ -16,16 +16,16 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <TopNav walletConnected={isConnected} walletAddress={address || undefined} />
-      
+
       <div className="flex">
         {showSidebar && (
-          <Sidebar 
-            collapsed={sidebarCollapsed} 
-            onCollapsedChange={setSidebarCollapsed} 
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onCollapsedChange={setSidebarCollapsed}
           />
         )}
-        
-        <main 
+
+        <main
           className={cn(
             "flex-1 transition-all duration-300 min-h-[calc(100vh-5rem)]",
             showSidebar ? (sidebarCollapsed ? "lg:ml-20" : "lg:ml-64") : ""

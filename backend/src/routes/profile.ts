@@ -5,6 +5,9 @@ import Credential from '../models/Credential';
 import Achievement from '../models/Achievement';
 import axios from 'axios';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { hashCredentialData } from '../services/hashing';
+import { addCredentialOnChain } from '../services/blockchain';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -187,6 +190,142 @@ router.patch('/', authenticate, async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('[PROFILE] Update error:', error);
         res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+// POST /api/profile/onboard — Complete onboarding and record credentials
+router.post('/onboard', authenticate, async (req: AuthRequest, res: Response) => {
+    try {
+        const { displayName, handle, email, walletAddress, avatar, visibility, certificates } = req.body;
+
+        // 1. Find user
+        const user = await User.findById(req.userId);
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        // 2. Validate handle is unique if it's changing
+        if (handle && handle !== user.handle) {
+            const existing = await User.findOne({ handle });
+            if (existing) {
+                res.status(400).json({ error: 'Handle already taken' });
+                return;
+            }
+        }
+
+        // 3. Resolve wallet address
+        let resolvedWallet = walletAddress || user.walletAddress;
+        if (!resolvedWallet) {
+            // Generate a deterministic mock wallet address based on handle or email
+            const seed = email || handle || user.email || user.handle;
+            resolvedWallet = '0x' + crypto.createHash('sha256').update(seed).digest('hex').substring(0, 40);
+        }
+
+        // 4. Update user details
+        user.displayName = displayName || user.displayName;
+        user.handle = handle || user.handle;
+        user.email = email || user.email;
+        user.walletAddress = resolvedWallet;
+        if (avatar) {
+            user.avatar = avatar;
+        }
+        if (visibility) {
+            user.visibility = {
+                certificates: visibility.certificates !== undefined ? visibility.certificates : user.visibility.certificates,
+                repos: visibility.repos !== undefined ? visibility.repos : user.visibility.repos,
+                endorsements: visibility.endorsements !== undefined ? visibility.endorsements : user.visibility.endorsements,
+            };
+        }
+        user.verified = true; // Mark user as onboarded / verified
+
+        await user.save();
+
+        // 5. Process Certificates / Credentials
+        const processedCredentials = [];
+        if (certificates && Array.isArray(certificates)) {
+            for (const cert of certificates) {
+                const { name, certificateId, issuerName, verifiableLink, recipientProfileLink, fileName, fileSize, fileType, fileData } = cert;
+
+                if (!name || !issuerName) {
+                    continue; // Name and issuer are required
+                }
+
+                // Derive issuer wallet address from issuerName deterministically
+                const derivedIssuerWallet = '0x' + crypto.createHash('sha256').update(issuerName).digest('hex').substring(0, 40);
+
+                // Construct raw credential payload
+                const credentialData = {
+                    name,
+                    certificateId: certificateId || 'N/A',
+                    issuerName,
+                    verifiableLink: verifiableLink || 'N/A',
+                    recipientProfileLink: recipientProfileLink || 'N/A',
+                    fileName: fileName || '',
+                    fileSize: fileSize || 0,
+                    fileType: fileType || '',
+                    fileData: fileData || '',
+                };
+
+                // Hash the credential data
+                const hash = hashCredentialData(credentialData);
+
+                // Check for duplicate
+                let existingCred = await Credential.findOne({ hash });
+                if (existingCred) {
+                    processedCredentials.push(existingCred);
+                    continue;
+                }
+
+                // Write hash on-chain (Polygon)
+                let txHash: string | undefined;
+                try {
+                    // Category: "Certificate"
+                    const result = await addCredentialOnChain(resolvedWallet, hash, 'Certificate');
+                    txHash = result ?? undefined;
+                } catch (chainError) {
+                    console.error('[ONBOARDING] On-chain write failed for cert:', name, chainError);
+                    // Continue, it will save as unverified on-chain but saved in DB
+                }
+
+                // Save to database
+                const credential = await Credential.create({
+                    userWallet: resolvedWallet,
+                    issuerWallet: derivedIssuerWallet,
+                    category: 'Certificate',
+                    data: credentialData,
+                    hash,
+                    txHash,
+                    verified: !!txHash,
+                    issuedAt: new Date(),
+                });
+
+                processedCredentials.push(credential);
+            }
+        }
+
+        res.status(200).json({
+            user: {
+                id: user._id,
+                displayName: user.displayName,
+                handle: user.handle,
+                email: user.email,
+                walletAddress: user.walletAddress,
+                avatar: user.avatar,
+                reputationScore: user.reputationScore,
+                tier: user.tier,
+                connectedProviders: user.connectedProviders,
+                techStack: user.techStack,
+                visibility: user.visibility,
+                verified: user.verified,
+                createdAt: user.createdAt
+            },
+            credentials: processedCredentials,
+        });
+
+    } catch (error) {
+        console.error('[ONBOARDING] Onboarding completion error:', error);
+        res.status(500).json({ error: 'Failed to complete onboarding' });
     }
 });
 

@@ -10,6 +10,8 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { OnChainStatus } from '@/components/OnChainStatus';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useWallet } from '@/hooks/useWallet';
+import api from '@/lib/api';
 
 const steps = [
   { id: 'identity', title: 'Sovereign Identity', icon: User, desc: 'Define your public anchor' },
@@ -22,22 +24,36 @@ const steps = [
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [hashingStatus, setHashingStatus] = useState<'idle' | 'hashing' | 'confirming' | 'success'>('idle');
+  const [txHash, setTxHash] = useState<string>('');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { connect: connectWallet, address: walletAddress, isConnected: isWalletConnected } = useWallet();
 
   const [formData, setFormData] = useState({
     displayName: '',
     handle: '',
     email: '',
     avatar: null as File | null,
+    avatarUrl: '',
     connectedSources: {
-      github: !!user?.connectedProviders?.github,
-      google: !!user?.connectedProviders?.google,
-      wallet: !!user?.walletAddress,
+      github: false,
+      google: false,
+      wallet: false,
       linkedin: false,
     },
-    certificates: [] as File[],
+    walletAddress: '',
+    certificates: [] as Array<{
+      name: string;
+      certificateId?: string;
+      issuerName: string;
+      verifiableLink?: string;
+      recipientProfileLink: string;
+      fileName?: string;
+      fileSize?: number;
+      fileType?: string;
+      fileData?: string; // base64
+    }>,
     visibility: {
       profile: true,
       repos: true,
@@ -46,6 +62,41 @@ export default function OnboardingPage() {
     },
   });
 
+  // Certificate input fields sub-state (Step 3)
+  const [certForm, setCertForm] = useState({
+    name: '',
+    certificateId: '',
+    issuerName: '',
+    verifiableLink: '',
+    recipientProfileLink: '',
+    file: null as File | null,
+    fileData: '',
+    fileName: '',
+    fileSize: 0,
+    fileType: '',
+  });
+
+  // Pre-populate fields when user context is loaded
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        displayName: prev.displayName || user.displayName || '',
+        handle: prev.handle || user.handle || '',
+        email: prev.email || user.email || '',
+        avatarUrl: prev.avatarUrl || user.avatar || '',
+        connectedSources: {
+          ...prev.connectedSources,
+          github: !!user.connectedProviders?.github,
+          google: !!user.connectedProviders?.google,
+          wallet: !!user.walletAddress || prev.connectedSources.wallet,
+        },
+        walletAddress: prev.walletAddress || user.walletAddress || '',
+      }));
+    }
+  }, [user]);
+
+  // Handle OAuth callback parameters (GitHub)
   useEffect(() => {
     const githubId = searchParams.get('github_id');
     const githubUser = searchParams.get('github_user');
@@ -54,11 +105,118 @@ export default function OnboardingPage() {
       setFormData(prev => ({
         ...prev,
         connectedSources: { ...prev.connectedSources, github: true },
-        handle: githubUser + '.eth' // Suggest handle from github
+        handle: githubUser + '.eth'
       }));
-      setCurrentStep(1); // Ensure we stay on sources step
+      setCurrentStep(1); // Stay on sources step
     }
   }, [searchParams]);
+
+  // Sync wallet connect address to form data
+  useEffect(() => {
+    if (isWalletConnected && walletAddress) {
+      setFormData(prev => ({
+        ...prev,
+        walletAddress: walletAddress,
+        connectedSources: {
+          ...prev.connectedSources,
+          wallet: true
+        }
+      }));
+    }
+  }, [isWalletConnected, walletAddress]);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Visual Cryptogram avatar file must be under 2MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({
+          ...prev,
+          avatar: file,
+          avatarUrl: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCertFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Certificate file size must be under 5MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCertForm(prev => ({
+          ...prev,
+          file: file,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          fileData: reader.result as string, // base64 Data URL
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddCertificate = () => {
+    const { name, issuerName, recipientProfileLink, fileData } = certForm;
+    if (!name.trim()) {
+      alert('Certificate Title/Name is required.');
+      return;
+    }
+    if (!issuerName.trim()) {
+      alert('Issuer Name is required.');
+      return;
+    }
+    if (!recipientProfileLink.trim()) {
+      alert('Recipient Profile Link is required.');
+      return;
+    }
+    if (!fileData) {
+      alert('Please upload a certificate file.');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      certificates: [
+        ...prev.certificates,
+        {
+          name: certForm.name.trim(),
+          certificateId: certForm.certificateId.trim() || undefined,
+          issuerName: certForm.issuerName.trim(),
+          verifiableLink: certForm.verifiableLink.trim() || undefined,
+          recipientProfileLink: certForm.recipientProfileLink.trim(),
+          fileName: certForm.fileName,
+          fileSize: certForm.fileSize,
+          fileType: certForm.fileType,
+          fileData: certForm.fileData,
+        }
+      ]
+    }));
+
+    // Reset form
+    setCertForm({
+      name: '',
+      certificateId: '',
+      issuerName: '',
+      verifiableLink: '',
+      recipientProfileLink: '',
+      file: null,
+      fileData: '',
+      fileName: '',
+      fileSize: 0,
+      fileType: '',
+    });
+  };
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -73,18 +231,58 @@ export default function OnboardingPage() {
   };
 
   const handleFinish = async () => {
-    setHashingStatus('hashing');
-    await new Promise(r => setTimeout(r, 2000));
-    setHashingStatus('confirming');
-    await new Promise(r => setTimeout(r, 2000));
-    setHashingStatus('success');
-    await new Promise(r => setTimeout(r, 1500));
-    navigate('/profile');
+    try {
+      setHashingStatus('hashing');
+      
+      const payload = {
+        displayName: formData.displayName,
+        handle: formData.handle,
+        email: formData.email,
+        walletAddress: formData.walletAddress,
+        avatar: formData.avatarUrl,
+        visibility: {
+          certificates: formData.visibility.certificates,
+          repos: formData.visibility.repos,
+          endorsements: formData.visibility.endorsements
+        },
+        certificates: formData.certificates
+      };
+
+      // Ingest payload to backend database & hash on-chain
+      const response = await api.post('/profile/onboard', payload);
+      
+      const credentials = response.data?.credentials;
+      if (credentials && credentials.length > 0) {
+        // Take the first txHash if available
+        const hash = credentials[0].txHash;
+        if (hash) {
+          setTxHash(hash);
+        }
+      }
+      
+      setHashingStatus('confirming');
+      // Premium visual confirmation pause
+      await new Promise(r => setTimeout(r, 2000));
+      
+      setHashingStatus('success');
+      await new Promise(r => setTimeout(r, 1500));
+      
+      if (refreshUser) {
+        await refreshUser();
+      }
+      
+      navigate('/profile');
+    } catch (error: any) {
+      console.error('Onboarding submission failed:', error);
+      const errMsg = error.response?.data?.error || error.response?.data?.message || error.message || 'Unknown Error';
+      const statusText = error.response?.status ? ` (Status: ${error.response.status})` : '';
+      alert(`Failed to complete onboarding sequence: ${errMsg}${statusText}`);
+      setHashingStatus('idle');
+    }
   };
 
   const toggleSource = (source: keyof typeof formData.connectedSources) => {
     if (source === 'github') {
-      // If already connected, just toggle local state (or do nothing if you want it sticky)
       if (user?.connectedProviders?.github || formData.connectedSources.github) {
         setFormData(prev => ({
           ...prev,
@@ -93,9 +291,21 @@ export default function OnboardingPage() {
         return;
       }
       
-      // Redirect to backend OAuth flow
       const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
       window.location.href = `${backendUrl}/api/auth/github`;
+      return;
+    }
+
+    if (source === 'wallet') {
+      if (formData.connectedSources.wallet) {
+        setFormData(prev => ({
+          ...prev,
+          connectedSources: { ...prev.connectedSources, wallet: false },
+          walletAddress: ''
+        }));
+      } else {
+        connectWallet();
+      }
       return;
     }
 
@@ -242,12 +452,39 @@ export default function OnboardingPage() {
 
                       <div className="space-y-2 pt-2">
                         <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Visual Cryptogram (Avatar)</label>
-                        <div className="group flex h-32 cursor-pointer items-center justify-center border max-w-xs border-dashed border-border bg-secondary/10 transition-colors hover:border-primary/50 hover:bg-primary/5">
-                          <div className="text-center transition-transform group-hover:scale-105">
-                            <Upload className="mx-auto h-6 w-6 text-muted-foreground group-hover:text-primary mb-3" />
-                            <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground group-hover:text-foreground">Upload Vector</p>
+                        <input
+                          type="file"
+                          id="avatar-input"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleAvatarChange}
+                        />
+                        {formData.avatarUrl ? (
+                          <div className="relative group max-w-xs h-32 border border-primary/30 bg-secondary/10 flex items-center justify-center">
+                            <img
+                              src={formData.avatarUrl}
+                              alt="Avatar Preview"
+                              className="h-28 w-28 object-cover border border-primary/20"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, avatar: null, avatarUrl: '' }))}
+                              className="absolute top-1 right-1 bg-background/80 hover:bg-destructive hover:text-white border border-border p-1 text-xs uppercase font-mono font-bold transition-all text-foreground"
+                            >
+                              Remove
+                            </button>
                           </div>
-                        </div>
+                        ) : (
+                          <div
+                            onClick={() => document.getElementById('avatar-input')?.click()}
+                            className="group flex h-32 cursor-pointer items-center justify-center border max-w-xs border-dashed border-border bg-secondary/10 transition-colors hover:border-primary/50 hover:bg-primary/5"
+                          >
+                            <div className="text-center transition-transform group-hover:scale-105">
+                              <Upload className="mx-auto h-6 w-6 text-muted-foreground group-hover:text-primary mb-3" />
+                              <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground group-hover:text-foreground">Upload Vector</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -359,17 +596,161 @@ export default function OnboardingPage() {
                       <p className="text-muted-foreground">Upload physical or digital certificates to be anchored on-chain.</p>
                     </div>
 
-                    <div className="group flex flex-col items-center justify-center p-12 border-2 border-dashed border-border/50 bg-secondary/10 hover:border-primary/50 hover:bg-primary/5 transition-all text-center max-w-2xl cursor-pointer min-h-[300px]">
-                      <div className="h-16 w-16 mb-6 flex items-center justify-center bg-background border border-border group-hover:border-primary/50 group-hover:text-primary transition-colors">
-                        <Upload className="h-8 w-8" />
+                    {/* Added Certificates List */}
+                    {formData.certificates.length > 0 && (
+                      <div className="space-y-4 max-w-2xl border border-primary/20 bg-primary/5 p-6">
+                        <h3 className="font-mono text-xs uppercase tracking-widest text-primary/80 font-bold border-b border-primary/10 pb-2">
+                          Ingested Certificates ({formData.certificates.length})
+                        </h3>
+                        <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
+                          {formData.certificates.map((cert, idx) => (
+                            <div key={idx} className="flex items-center justify-between border border-border bg-background p-3">
+                              <div className="flex items-center gap-3 truncate">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-primary text-primary bg-primary/5 font-mono text-xs">
+                                  {idx + 1}
+                                </div>
+                                <div className="truncate">
+                                  <p className="font-heading text-sm font-bold uppercase truncate">{cert.name}</p>
+                                  <p className="font-mono text-[10px] text-muted-foreground truncate">
+                                    Issuer: {cert.issuerName} {cert.certificateId ? `| ID: ${cert.certificateId}` : ''}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 rounded-none text-destructive hover:bg-destructive/10 uppercase font-bold text-xs"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    certificates: prev.certificates.filter((_, i) => i !== idx)
+                                  }));
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <h3 className="font-heading text-xl font-bold uppercase mb-2">Transmit Artifacts</h3>
-                      <p className="text-muted-foreground font-medium mb-4">Drag payload here or browse local file system</p>
-                      <div className="flex gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground/60">
-                        <span className="bg-background px-2 py-1 border border-border">PDF</span>
-                        <span className="bg-background px-2 py-1 border border-border">PNG</span>
-                        <span className="bg-background px-2 py-1 border border-border">JPG</span>
+                    )}
+
+                    {/* Add Certificate Form */}
+                    <div className="space-y-6 max-w-2xl border border-border bg-secondary/10 p-6">
+                      <h3 className="font-heading text-lg font-bold uppercase tracking-wide border-b border-border pb-2">
+                        Add New Verification Node
+                      </h3>
+
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Certificate Title / Name *</label>
+                          <input
+                            type="text"
+                            value={certForm.name}
+                            onChange={e => setCertForm(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="e.g. SPECIALIST DEFI AUDITOR"
+                            className="h-11 w-full rounded-none border border-border bg-background px-3 font-mono text-sm focus:border-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Issuer Name *</label>
+                          <input
+                            type="text"
+                            value={certForm.issuerName}
+                            onChange={e => setCertForm(prev => ({ ...prev, issuerName: e.target.value }))}
+                            placeholder="e.g. ACME ACADEMY"
+                            className="h-11 w-full rounded-none border border-border bg-background px-3 font-mono text-sm focus:border-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Certificate ID (Optional)</label>
+                            <input
+                              type="text"
+                              value={certForm.certificateId}
+                              onChange={e => setCertForm(prev => ({ ...prev, certificateId: e.target.value }))}
+                              placeholder="e.g. CERT-102938"
+                              className="h-11 w-full rounded-none border border-border bg-background px-3 font-mono text-sm focus:border-primary focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Verifiable Link (Optional)</label>
+                            <input
+                              type="url"
+                              value={certForm.verifiableLink}
+                              onChange={e => setCertForm(prev => ({ ...prev, verifiableLink: e.target.value }))}
+                              placeholder="e.g. https://verify.com/cert/102938"
+                              className="h-11 w-full rounded-none border border-border bg-background px-3 font-mono text-sm focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Recipient Profile Link *</label>
+                          <input
+                            type="url"
+                            value={certForm.recipientProfileLink}
+                            onChange={e => setCertForm(prev => ({ ...prev, recipientProfileLink: e.target.value }))}
+                            placeholder="e.g. https://github.com/myusername (Your issued profile link)"
+                            className="h-11 w-full rounded-none border border-border bg-background px-3 font-mono text-sm focus:border-primary focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-2 pt-2">
+                          <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground font-bold">Certificate Document File *</label>
+                          <input
+                            type="file"
+                            id="cert-file-input"
+                            className="hidden"
+                            accept=".pdf,image/*"
+                            onChange={handleCertFileChange}
+                          />
+                          {certForm.fileData ? (
+                            <div className="flex items-center justify-between border border-primary/40 bg-primary/5 p-4">
+                              <div className="flex items-center gap-3 truncate">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-primary bg-background text-primary">
+                                  <Shield className="h-5 w-5" />
+                                </div>
+                                <div className="truncate">
+                                  <p className="font-mono text-sm font-bold truncate">{certForm.fileName}</p>
+                                  <p className="font-mono text-xs text-muted-foreground">
+                                    {(certForm.fileSize / 1024).toFixed(1)} KB | {certForm.fileType}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 rounded-none text-destructive hover:bg-destructive/10 uppercase font-bold text-xs"
+                                onClick={() => setCertForm(prev => ({ ...prev, file: null, fileData: '', fileName: '', fileSize: 0, fileType: '' }))}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          ) : (
+                            <div
+                              onClick={() => document.getElementById('cert-file-input')?.click()}
+                              className="group flex flex-col items-center justify-center p-8 border border-dashed border-border hover:border-primary/50 bg-background/50 hover:bg-primary/5 transition-all text-center cursor-pointer min-h-[140px]"
+                            >
+                              <Upload className="h-6 w-6 text-muted-foreground group-hover:text-primary mb-2 transition-colors" />
+                              <p className="text-sm font-mono uppercase tracking-wide text-muted-foreground group-hover:text-foreground">Click to upload document vector</p>
+                              <p className="text-[10px] font-mono text-muted-foreground/60 mt-1">PDF, PNG, JPG (Max 5MB)</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      <Button
+                        type="button"
+                        onClick={handleAddCertificate}
+                        className="w-full h-11 rounded-none bg-foreground text-background hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-widest transition-all"
+                      >
+                        Ingest Verification Node
+                      </Button>
                     </div>
 
                     <div className="max-w-2xl flex items-start gap-4 border-l-2 border-accent/50 bg-accent/5 p-4">
@@ -495,7 +876,7 @@ export default function OnboardingPage() {
                       </div>
 
                       <div className="flex flex-col justify-end space-y-6">
-                        <OnChainStatus status={hashingStatus} txHash="0x7a3f...d94c" />
+                        <OnChainStatus status={hashingStatus} txHash={txHash || undefined} />
 
                         <Button
                           size="xl"

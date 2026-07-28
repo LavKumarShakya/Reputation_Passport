@@ -335,13 +335,13 @@ export default function ProfilePage() {
               </section>
 
               {/* Graphical Analysis */}
-              <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-12">
+              <div className="flex flex-col gap-12">
                 <section>
                   <div className="mb-8 flex items-center justify-between border-b border-border/30 pb-4">
                     <h2 className="font-heading text-2xl font-bold uppercase tracking-wider">Velocity Curve</h2>
                     <span className="font-mono text-xs text-primary uppercase tracking-widest">Live Updates</span>
                   </div>
-                  <div className="border border-border bg-secondary/5 p-6 min-h-[300px]">
+                  <div className="border border-border bg-secondary/5 p-6 min-h-[400px]">
                     <ReputationGraph walletAddress={userToDisplay.walletAddress || userToDisplay.handle || userToDisplay._id} />
                   </div>
                 </section>
@@ -350,7 +350,7 @@ export default function ProfilePage() {
                   <div className="mb-8 flex items-center justify-between border-b border-border/30 pb-4">
                     <h2 className="font-heading text-2xl font-bold uppercase tracking-wider">Event Log</h2>
                   </div>
-                  <div className="border border-border bg-secondary/5 p-6 h-full max-h-[500px] overflow-y-auto custom-scrollbar">
+                  <div className="border border-border bg-secondary/5 p-6">
                     <Timeline credentials={profile?.credentials} />
                   </div>
                 </section>
