@@ -23,6 +23,7 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 - [Key Features](#-key-features)
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
+- [Onboarding Pipeline](#-onboarding-pipeline)
 - [Reputation Scoring Engine](#-reputation-scoring-engine)
 - [Smart Contract](#-smart-contract)
 - [Project Structure](#-project-structure)
@@ -55,6 +56,15 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 | 💜 **Platinum** | 700–899 | Purple / Violet |
 | 💎 **Diamond** | 900+ | Cyan / Teal |
 
+### 🚀 Multi-Step Onboarding Pipeline
+- **5-step guided onboarding** with real-time progress tracking and animated transitions
+- **Step 1 — Sovereign Identity:** Set display name, handle (unique), email, and avatar upload
+- **Step 2 — Data Vectors:** Connect reputation sources (GitHub OAuth, LinkedIn, portfolio URL)
+- **Step 3 — Cryptographic Proofs:** Upload certificates with metadata (certificate ID, verifiable link, recipient profile, issuer name) and file attachments (PDF/images converted to base64)
+- **Step 4 — Access Control:** Configure visibility permissions per credential type
+- **Step 5 — Node Deployment:** Preview Dynamic NFT Card, SHA-256 hash all credential data, write hashes on-chain via Polygon smart contract, and persist to MongoDB
+- Each certificate is individually hashed, anchored on-chain, and stored as a verifiable credential
+
 ### ⛓️ On-Chain Credential Verification
 - `ReputationPassport.sol` smart contract stores **SHA-256 credential hashes** on Polygon
 - **Whitelisted issuer model** — only verified institutions can issue credentials
@@ -86,6 +96,7 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 - **Email/password** registration and login (bcrypt 12 rounds + JWT)
 - **MetaMask** wallet authentication (`ethers.verifyMessage` signature verification)
 - **GitHub OAuth 2.0** (deep profile + tech-stack sync across up to 100 repos)
+- **Mock Wallet** login for local development and testing
 - **Identity Matrix** — self-sovereign profile management (update handle, alias, email)
 - **Account Purge** — irreversible node termination (wipes all user data & credentials)
 
@@ -112,7 +123,7 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 ┌──────────────────────┐        ┌──────────────────────┐        ┌──────────────────┐
 │    FRONTEND          │        │    BACKEND           │        │   BLOCKCHAIN     │
 │                      │        │                      │        │                  │
-│  React 18 + TS       │        │  Express 5 + TS      │        │  Solidity ^0.8.24│
+│  React 18 + TS       │        │  Express + TS        │        │  Solidity ^0.8.24│
 │  Vite 5              │ REST   │  MongoDB (Mongoose)  │ Ethers │  ERC-721 + SBT   │
 │  Tailwind + shadcn   │──────▶│  JWT + GitHub OAuth  │ ──────▶│  Whitelisted     │
 │  Framer Motion       │  API   │  SHA-256 Hashing     │  v6    │  Issuer Model    │
@@ -132,7 +143,7 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 ```
 
 **Data Distribution:**
-- **Off-chain (MongoDB):** Full user profiles, raw credential metadata, issuer registrations, achievements
+- **Off-chain (MongoDB):** Full user profiles, raw credential metadata, certificate file data (base64), issuer registrations, achievements
 - **On-chain (Polygon):** 32-byte credential hashes, issuer whitelist, user credential mappings, SBT tokens
 
 ---
@@ -151,20 +162,24 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 | **Ethers.js** | v6 | Blockchain interaction |
 | **Axios** | 1.x | API communication |
 | **React Router** | v6 | Client-side routing |
+| **React Query** | v5 | Server state management |
 | **Recharts** | 2.x | Data visualization charts |
 | **Lucide React** | — | Icon library |
+| **Sonner** | — | Toast notifications |
 | **Zod** | 3.x | Schema validation |
 
 ### Backend
 | Technology | Version | Purpose |
 |---|---|---|
 | **Node.js** | 18+ | Runtime |
-| **Express** | 5 | REST API server |
+| **Express** | 4.x | REST API server |
 | **TypeScript** | 5.x | Type safety |
 | **MongoDB** (Mongoose) | — | User, credential, issuer, achievement storage |
 | **JWT** (jsonwebtoken) | — | Stateless authentication (7-day expiry) |
 | **bcryptjs** | — | Password hashing (12 salt rounds) |
 | **Ethers.js** | v6 | On-chain credential writes |
+| **dotenv** | — | Environment configuration |
+| **CORS** | — | Cross-origin resource sharing |
 
 ### Blockchain
 | Technology | Version | Purpose |
@@ -178,10 +193,51 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 ### Design Language: Crypto-Brutalist
 - **Zero border radius** — sharp edges on all elements (`rounded-none`)
 - **Monospace typography** — JetBrains Mono for labels and system text
-- **Bold display headings** — Clash Display (Fontshare), always uppercase
+- **Bold display headings** — Space Grotesk, always uppercase
 - **Grain texture overlay** — noise PNG with `mix-blend-overlay`
 - **Scanline animations** — horizontal CRT simulation across card surfaces
 - **Dark palette** — `#0A0A0A` background with high-contrast tier accent colors
+
+---
+
+## 🚀 Onboarding Pipeline
+
+The onboarding system is a 5-step guided flow that takes a new user from raw authentication to a fully anchored on-chain reputation node.
+
+### Flow Diagram
+
+```
+┌────────────────┐    ┌────────────────┐    ┌────────────────┐    ┌────────────────┐    ┌────────────────┐
+│  STEP 1        │    │  STEP 2        │    │  STEP 3        │    │  STEP 4        │    │  STEP 5        │
+│  Sovereign     │───▶│  Data          │───▶│  Cryptographic │───▶│  Access        │───▶│  Node          │
+│  Identity      │    │  Vectors       │    │  Proofs        │    │  Control       │    │  Deployment    │
+│                │    │                │    │                │    │                │    │                │
+│  • Display Name│    │  • GitHub OAuth│    │  • Certificate │    │  • Visibility  │    │  • NFT Preview │
+│  • Handle      │    │  • LinkedIn    │    │    Upload      │    │    per type    │    │  • SHA-256 Hash│
+│  • Email       │    │  • Portfolio   │    │  • Issuer Name │    │  • Public /    │    │  • On-chain TX │
+│  • Avatar      │    │  • Website     │    │  • Cert ID *   │    │    Private     │    │  • MongoDB Save│
+│                │    │                │    │  • Verify Link*│    │                │    │  • Redirect    │
+│                │    │                │    │  • Profile Link│    │                │    │    to Profile  │
+└────────────────┘    └────────────────┘    └────────────────┘    └────────────────┘    └────────────────┘
+                                              * = optional
+```
+
+### Certificate Upload Fields
+| Field | Required | Description |
+|-------|----------|-------------|
+| **Certificate Name** | ✅ | Name/title of the certificate |
+| **Issuer Name** | ✅ | Organization or institution that issued the certificate |
+| **Certificate ID** | ❌ | Unique identifier printed on the certificate |
+| **Verifiable Link** | ❌ | URL where the certificate can be independently verified |
+| **Recipient Profile Link** | ❌ | Your profile on the platform that issued the certificate |
+| **File Upload** | ❌ | PDF or image of the certificate (converted to base64, stored in MongoDB) |
+
+### Credential Hashing Process
+1. All certificate metadata fields are concatenated into a JSON payload
+2. The payload is **SHA-256 hashed** to produce a 32-byte deterministic hash
+3. The hash is written on-chain via `addCredentialOnChain(wallet, hash, "Certificate")`
+4. The full credential (metadata + hash + txHash) is saved to MongoDB
+5. If on-chain write fails (e.g., no local Hardhat node), the credential is still saved to MongoDB with `verified: false`
 
 ---
 
@@ -258,15 +314,21 @@ aura-passport1/
 │   │   ├── CertificateCard.tsx    #   Individual credential display
 │   │   ├── AchievementBadge.tsx   #   Rarity-glowed achievement badge
 │   │   ├── OnChainStatus.tsx      #   On-chain verification indicator
+│   │   ├── ReputationPill.tsx     #   Reputation strip pills
 │   │   ├── Timeline.tsx           #   Chronological credential events
-│   │   ├── layout/                #   Layout components (TopNav, etc.)
+│   │   ├── layout/                #   Layout components (AppLayout, TopNav, Sidebar)
 │   │   └── ui/                    #   shadcn/ui primitives
-│   ├── hooks/                     # Custom hooks (useAuth, useProfile, useAdminData)
+│   ├── hooks/                     # Custom hooks
+│   │   ├── useAuth.tsx            #   Authentication context & JWT management
+│   │   ├── useWallet.ts           #   MetaMask wallet connection
+│   │   ├── useProfileData.ts      #   Profile & achievements data fetching
+│   │   └── useAdminData.ts        #   Admin dashboard data
 │   ├── pages/                     # Route pages (16 total)
 │   │   ├── LandingPage.tsx        #   Marketing hero with Neural Synapse animation
 │   │   ├── AuthPage.tsx           #   Multi-method authentication
 │   │   ├── HomePage.tsx           #   Dashboard with DynamicNFTCard
-│   │   ├── ProfilePage.tsx        #   User profile + credentials + tech stack
+│   │   ├── ProfilePage.tsx        #   User profile + credentials + velocity curve
+│   │   ├── OnboardingPage.tsx     #   5-step onboarding pipeline
 │   │   ├── GraphPage.tsx          #   Interactive reputation graph
 │   │   ├── RecruiterPage.tsx      #   Verified candidate search
 │   │   ├── InstitutionPage.tsx    #   Credential issuance portal
@@ -274,26 +336,40 @@ aura-passport1/
 │   │   ├── SettingsPage.tsx       #   6-tab settings (Identity Matrix, etc.)
 │   │   ├── AchievementsPage.tsx   #   Gamified badges display
 │   │   ├── TimelinePage.tsx       #   Chronological activity
-│   │   ├── OnboardingPage.tsx     #   Multi-step onboarding flow
 │   │   ├── TestBlockchainPage.tsx #   Developer blockchain testing
 │   │   ├── AuthCallbackPage.tsx   #   OAuth redirect handler
 │   │   └── NotFound.tsx           #   404 page
 │   ├── lib/                       # API client, contract config, mock data
+│   │   ├── api.ts                 #   Axios instance with JWT interceptor
+│   │   ├── contract.ts            #   Ethers.js contract interaction
+│   │   └── mockData.ts            #   Development mock data
 │   └── utils/                     # Verification utilities
 ├── backend/                       # Express API server (TypeScript)
 │   └── src/
-│       ├── index.ts               # Server entry point
+│       ├── index.ts               # Server entry point (50MB body limit for file uploads)
 │       ├── routes/                # API route handlers
-│       │   └── auth, profile, credentials, admin, graph, issuers, users, achievements
-│       ├── models/                # Mongoose schemas (User, Credential, Issuer, Achievement)
+│       │   ├── auth.ts            #   Registration, login, OAuth, wallet auth
+│       │   ├── profile.ts         #   Profile CRUD + onboarding endpoint
+│       │   ├── credentials.ts     #   Credential issuance & verification
+│       │   ├── graph.ts           #   Reputation graph data generation
+│       │   ├── admin.ts           #   System-wide statistics
+│       │   ├── achievement.ts     #   Achievement queries
+│       │   ├── issuers.ts         #   Issuer management
+│       │   └── users.ts           #   User listing
+│       ├── models/                # Mongoose schemas
+│       │   ├── User.ts            #   User model (profile, wallet, visibility, techStack)
+│       │   ├── Credential.ts      #   Credential model (hash, txHash, data, verified)
+│       │   ├── Issuer.ts          #   Issuer model (institution whitelist)
+│       │   └── Achievement.ts     #   Achievement model (badges, rarity)
 │       ├── middleware/            # JWT authentication middleware
 │       ├── services/              # Business logic services
+│       │   └── blockchain.ts      #   Ethers.js on-chain write service
 │       ├── config/                # Database connection
 │       ├── scripts/               # Database seed script
-│       └── utils/                 # Utility functions
+│       └── utils/                 # Hashing & utility functions
 ├── blockchain/                    # Smart contract (Hardhat)
 │   ├── contracts/
-│   │   └── ReputationPassport.sol # Main smart contract
+│   │   └── ReputationPassport.sol # Main smart contract (ERC-721 + SBT)
 │   ├── deploy.js                  # Deployment script
 │   ├── test.js                    # Contract unit tests
 │   └── hardhat.config.js          # Hardhat configuration (localhost + Amoy)
@@ -337,17 +413,28 @@ cd blockchain && npm install && cd ..
 
 **Backend** — create `backend/.env`:
 ```env
+# Server
 PORT=5000
 NODE_ENV=development
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/reputationpassport?retryWrites=true&w=majority
+
+# MongoDB
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/reputation-passport?retryWrites=true&w=majority
+
+# JWT
 JWT_SECRET=your_secure_random_secret_key    # Generate: openssl rand -hex 32
 JWT_EXPIRES_IN=7d
+
+# Blockchain (Hardhat Local Node)
 PRIVATE_KEY=0x_your_wallet_private_key
 CONTRACT_ADDRESS=0x_deployed_contract_address
-POLYGON_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
+POLYGON_AMOY_RPC_URL=http://127.0.0.1:8545
+
+# GitHub OAuth
 GITHUB_CLIENT_ID=your_github_oauth_client_id
 GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
-FRONTEND_URL=http://localhost:5173
+
+# URLs
+FRONTEND_URL=http://localhost:8080
 BACKEND_URL=http://localhost:5000
 ```
 
@@ -365,7 +452,7 @@ cd backend && npm run dev
 
 # Terminal 2 — Frontend
 npm run dev
-# → Vite dev server on http://localhost:5173
+# → Vite dev server on http://localhost:8080
 
 # Terminal 3 (Optional) — Local Blockchain
 cd blockchain && npx hardhat node
@@ -380,7 +467,7 @@ npx hardhat compile
 npx hardhat run deploy.js --network localhost
 ```
 
-Copy the deployed contract address into `backend/.env` → `CONTRACT_ADDRESS` and `.env.local` → `VITE_CONTRACT_ADDRESS`.
+Copy the deployed contract address into `backend/.env` → `CONTRACT_ADDRESS`.
 
 ### 5. Seed Test Data
 
@@ -408,7 +495,7 @@ Creates **5 test users** (one per reputation tier), sample issuers, and credenti
 | `POLYGON_AMOY_RPC_URL` | Polygon RPC endpoint | `https://rpc-amoy.polygon.technology` |
 | `GITHUB_CLIENT_ID` | GitHub OAuth app client ID | From GitHub Developer Settings |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth app client secret | From GitHub Developer Settings |
-| `FRONTEND_URL` | Frontend origin (for CORS) | `http://localhost:5173` |
+| `FRONTEND_URL` | Frontend origin (for CORS) | `http://localhost:8080` |
 | `BACKEND_URL` | Backend URL | `http://localhost:5000` |
 
 ### Frontend (`.env.local`)
@@ -421,8 +508,8 @@ Creates **5 test users** (one per reputation tier), sample issuers, and credenti
 
 ## 📡 API Reference
 
-**Base URL:** `http://localhost:5000/api`  
-**Authentication:** JWT Bearer token in `Authorization` header  
+**Base URL:** `http://localhost:5000/api`
+**Authentication:** JWT Bearer token in `Authorization` header
 🔒 = Requires authentication
 
 ### Authentication (`/api/auth`)
@@ -444,7 +531,38 @@ Creates **5 test users** (one per reputation tier), sample issuers, and credenti
 | `GET` | `/profile/me` 🔒 | Get authenticated user's profile + credentials |
 | `GET` | `/profile/:id` | Get public profile by ID, wallet, or handle |
 | `PATCH` | `/profile` 🔒 | Update profile fields |
-| `DELETE` | `/profile` 🔒 | **Account Purge** — permanently delete account |
+| `POST` | `/profile/onboard` 🔒 | **Full onboarding pipeline** — saves identity, hashes & anchors certificates on-chain |
+| `DELETE` | `/profile` 🔒 | **Account Purge** — permanently delete account and all associated data |
+
+### Onboard Request Body (`POST /api/profile/onboard`)
+
+```json
+{
+  "displayName": "Lav Kumar Shakya",
+  "handle": "lavkumarshakya",
+  "email": "user@example.com",
+  "walletAddress": "0x...",
+  "avatar": "data:image/png;base64,...",
+  "visibility": {
+    "certificates": true,
+    "repos": true,
+    "endorsements": false
+  },
+  "certificates": [
+    {
+      "name": "AWS Solutions Architect",
+      "issuerName": "Amazon Web Services",
+      "certificateId": "AWS-SAA-C03-12345",
+      "verifiableLink": "https://verify.aws.com/...",
+      "recipientProfileLink": "https://credly.com/...",
+      "fileName": "aws-cert.pdf",
+      "fileSize": 245000,
+      "fileType": "application/pdf",
+      "fileData": "data:application/pdf;base64,..."
+    }
+  ]
+}
+```
 
 ### Credentials (`/api/credentials`)
 
@@ -521,7 +639,7 @@ npx hardhat verify --network amoy <CONTRACT_ADDRESS>
 
 | Field | Development | Production |
 |-------|------------|-----------|
-| Homepage URL | `http://localhost:5173` | `https://your-app.vercel.app` |
+| Homepage URL | `http://localhost:8080` | `https://your-app.vercel.app` |
 | Callback URL | `http://localhost:5000/api/auth/github/callback` | `https://your-api.onrender.com/api/auth/github/callback` |
 
 > **Full deployment guide** with troubleshooting is available in [`doc/14_Deployment_Guide.md`](doc/14_Deployment_Guide.md).
@@ -553,11 +671,11 @@ Automated unit and integration test suites for the backend and frontend are desi
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start frontend dev server (Vite) |
+| `npm run dev` | Start frontend dev server (Vite, port 8080) |
 | `npm run build` | Production build |
 | `npm run lint` | Run ESLint |
 | `npm run preview` | Preview production build locally |
-| `cd backend && npm run dev` | Start backend with hot-reload |
+| `cd backend && npm run dev` | Start backend with hot-reload (port 5000) |
 | `cd backend && npm run seed` | Seed database with test data |
 | `cd blockchain && npx hardhat compile` | Compile smart contract |
 | `cd blockchain && npx hardhat test` | Run contract unit tests |
@@ -577,7 +695,8 @@ Automated unit and integration test suites for the backend and frontend are desi
 │  scoring     │   │  Recruiter   │   │  Mobile app  │   │  DAO         │
 │  NFT card    │   │  + Institution│  │  API market  │   │  governance  │
 │  16 pages    │   │  portals     │   │  CI/CD       │   │  AI skill    │
-│              │   │  Graph + SBT │   │  100K users  │   │  assessment  │
+│  Onboarding  │   │  Graph + SBT │   │  100K users  │   │  assessment  │
+│  pipeline    │   │              │   │              │   │              │
 └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
 ```
 
