@@ -209,7 +209,7 @@ The onboarding system is a 5-step guided flow that takes a new user from raw aut
 ```
 ┌────────────────┐    ┌────────────────┐    ┌────────────────┐    ┌────────────────┐    ┌────────────────┐
 │  STEP 1        │    │  STEP 2        │    │  STEP 3        │    │  STEP 4        │    │  STEP 5        │
-│  Sovereign     │───▶│  Data          │───▶│  Cryptographic │───▶│  Access        │───▶│  Node          │
+│  Sovereign     │───▶│  Data         │───▶│  Cryptographic │───▶│  Access       │───▶│  Node          │
 │  Identity      │    │  Vectors       │    │  Proofs        │    │  Control       │    │  Deployment    │
 │                │    │                │    │                │    │                │    │                │
 │  • Display Name│    │  • GitHub OAuth│    │  • Certificate │    │  • Visibility  │    │  • NFT Preview │
