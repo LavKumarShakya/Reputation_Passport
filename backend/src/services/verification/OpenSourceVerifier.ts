@@ -52,14 +52,16 @@ export class OpenSourceVerifier extends BaseVerifier {
                 headers, timeout: 10_000,
             });
             repo = repoRes.data;
-            breakdown.repo_exists = 20;
+            breakdown.repo_exists = 17;
             evidence.push(`Repository "${repoOwner}/${repoName}" exists`);
             await this.log(sid, 'repo_check', 'success', `Repo exists with ${repo.stargazers_count} stars`);
 
             // ── Step 5: Popularity ─────────────────────────────────────────────
-            if (repo.stargazers_count >= 100) {
-                breakdown.repo_popularity = 10;
-                evidence.push(`Repository has ${repo.stargazers_count} stars`);
+            if (repo.stargazers_count > 0) {
+                // Up to 14 points for stars, fully maxed at 140 stars
+                const starPoints = Math.min(14, Math.ceil(repo.stargazers_count / 10));
+                breakdown.repo_popularity = starPoints;
+                evidence.push(`Repository has ${repo.stargazers_count} stars (+${starPoints} pts)`);
             }
         } catch (err: any) {
             if (err.response?.status === 404) {
@@ -85,16 +87,16 @@ export class OpenSourceVerifier extends BaseVerifier {
                 const userContrib = contributors.find(c => c.login.toLowerCase() === githubUsername.toLowerCase());
 
                 if (userContrib) {
-                    breakdown.user_is_contributor = 30;
+                    breakdown.user_is_contributor = 28;
                     evidence.push(`GitHub user "${githubUsername}" has ${userContrib.contributions} contributions`);
                     await this.log(sid, 'contributor_check', 'success', `${githubUsername} — ${userContrib.contributions} commits`);
 
                     // ── Step 3: Commit count bonus ─────────────────────────────────
-                    if (userContrib.contributions >= 10) {
-                        breakdown.commit_count = 20;
-                        evidence.push(`Significant contribution: ${userContrib.contributions} commits`);
-                    } else if (userContrib.contributions >= 3) {
-                        breakdown.commit_count = 10;
+                    if (userContrib.contributions > 0) {
+                        // Up to 22 points for commits, maxed at 11 commits (2 pts each)
+                        const commitPoints = Math.min(22, userContrib.contributions * 2);
+                        breakdown.commit_count = commitPoints;
+                        evidence.push(`Contribution weight: ${userContrib.contributions} commits (+${commitPoints} pts)`);
                     }
                 } else {
                     await this.log(sid, 'contributor_check', 'failure', `${githubUsername} not in contributors list`);
@@ -111,9 +113,11 @@ export class OpenSourceVerifier extends BaseVerifier {
                     { headers, timeout: 10_000 }
                 );
                 const prCount = prRes.data?.total_count || 0;
-                if (prCount >= 1) {
-                    breakdown.pull_requests = 20;
-                    evidence.push(`${prCount} pull request(s) by ${githubUsername}`);
+                if (prCount > 0) {
+                    // Up to 19 points for PRs, maxed at 4 PRs (~5 pts each)
+                    const prPoints = Math.min(19, prCount * 5);
+                    breakdown.pull_requests = prPoints;
+                    evidence.push(`${prCount} pull request(s) by ${githubUsername} (+${prPoints} pts)`);
                     await this.log(sid, 'pr_check', 'success', `${prCount} PR(s) found`);
                 } else {
                     await this.log(sid, 'pr_check', 'skipped', 'No pull requests found');

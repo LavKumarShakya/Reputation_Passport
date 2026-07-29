@@ -65,7 +65,7 @@ export class CertificateVerifier extends BaseVerifier {
         // ── Step 2: Name match in extracted text ───────────────────────────
         const userName = (user.displayName || '').toLowerCase();
         if (userName && textLower.includes(userName)) {
-            breakdown.ocr_name_match = 20;
+            breakdown.ocr_name_match = 17;
             evidence.push(`Recipient name "${user.displayName}" found in certificate text`);
             await this.log(sid, 'name_match', 'success', `User name matched in OCR text`);
         } else if (extractedText) {
@@ -75,13 +75,13 @@ export class CertificateVerifier extends BaseVerifier {
         // ── Step 3: Certificate ID in PDF ──────────────────────────────────
         const certId = (submission.metadata?.certificateId || '').toLowerCase().trim();
         if (certId && textLower.includes(certId)) {
-            breakdown.certificate_id_in_pdf = 20;
+            breakdown.certificate_id_in_pdf = 23;
             evidence.push(`Certificate ID "${submission.metadata.certificateId}" found in document`);
             await this.log(sid, 'certificate_id_check', 'success', 'Certificate ID matched in document text');
         } else if (certId) {
             await this.log(sid, 'certificate_id_check', 'failure', 'Certificate ID not found in document text');
         } else {
-            breakdown.certificate_id_in_pdf = 10; // partial credit — no ID provided
+            breakdown.certificate_id_in_pdf = 7; // partial credit — no ID provided
             await this.log(sid, 'certificate_id_check', 'skipped', 'No certificate ID provided');
         }
 
@@ -89,7 +89,7 @@ export class CertificateVerifier extends BaseVerifier {
         const issuerLower = submission.issuer.toLowerCase();
         const isTrusted = TRUSTED_ISSUERS.some(ti => issuerLower.includes(ti));
         if (isTrusted) {
-            breakdown.trusted_issuer = 20;
+            breakdown.trusted_issuer = 21;
             evidence.push(`Issuer "${submission.issuer}" is on the trusted issuers list`);
             await this.log(sid, 'issuer_validation', 'success', `Trusted issuer: ${submission.issuer}`);
         } else {
@@ -108,21 +108,21 @@ export class CertificateVerifier extends BaseVerifier {
 
                 let urlScore = 0;
                 if (response.status >= 200 && response.status < 400) {
-                    urlScore += 20; // page accessible
+                    urlScore += 13; // page accessible
                     evidence.push(`Verification URL responded with status ${response.status}`);
                 }
 
                 // Check if cert ID or user name appears in the page
                 if (certId && bodyLower.includes(certId)) {
-                    urlScore += 20;
+                    urlScore += 13;
                     evidence.push('Certificate ID confirmed on verification page');
                 } else if (userName && bodyLower.includes(userName)) {
-                    urlScore += 20;
+                    urlScore += 13;
                     evidence.push('Recipient name confirmed on verification page');
                 }
 
-                breakdown.verification_url = this.clamp(urlScore, 40);
-                await this.log(sid, 'url_verification', 'success', `URL check complete — score: ${breakdown.verification_url}/40`);
+                breakdown.verification_url = this.clamp(urlScore, 39);
+                await this.log(sid, 'url_verification', 'success', `URL check complete — score: ${breakdown.verification_url}/39`);
             } catch (urlErr: any) {
                 // Network errors should be retried by BullMQ — rethrow if transient
                 if (urlErr.code === 'ECONNREFUSED' || urlErr.code === 'ETIMEDOUT') {

@@ -188,7 +188,7 @@ function RejectedCard({ achievement, onResubmit }: { achievement: AchievementDat
           size="sm"
           variant="outline"
           className="flex-1 rounded-none font-bold uppercase tracking-widest h-9 border-primary/50 text-primary hover:bg-primary/10"
-          onClick={() => resubmit()}
+          onClick={() => resubmit(undefined)}
           disabled={isPending}
         >
           <RefreshCw className={cn('mr-1.5 h-3 w-3', isPending && 'animate-spin')} />

@@ -46,14 +46,14 @@ export class HackathonVerifier extends BaseVerifier {
                 });
                 const repo = repoRes.data;
 
-                breakdown.github_repo_exists = 20;
+                breakdown.github_repo_exists = 19;
                 evidence.push(`GitHub repository "${repoOwner}/${repoName}" exists`);
                 await this.log(sid, 'github_repo_check', 'success', `Repo exists: ${repo.html_url}`);
 
                 // ── Step 3: Repo created before hackathon deadline ─────────────
                 const repoCreated = new Date(repo.created_at).getFullYear();
                 if (repoCreated <= hackathonYear) {
-                    breakdown.repo_created_before_deadline = 10;
+                    breakdown.repo_created_before_deadline = 11;
                     evidence.push(`Repository created in ${repoCreated} (hackathon year: ${hackathonYear})`);
                     await this.log(sid, 'repo_age_check', 'success', `Repo created in ${repoCreated}, hackathon year ${hackathonYear}`);
                 } else {
@@ -73,7 +73,7 @@ export class HackathonVerifier extends BaseVerifier {
                         );
 
                         if (isContributor) {
-                            breakdown.user_is_contributor = 30;
+                            breakdown.user_is_contributor = 29;
                             evidence.push(`GitHub user "${githubUsername}" is a contributor`);
                             await this.log(sid, 'contributor_check', 'success', `User "${githubUsername}" verified as contributor`);
                         } else {
@@ -115,11 +115,11 @@ export class HackathonVerifier extends BaseVerifier {
                 const projectName = (submission.metadata?.projectName || '').toLowerCase();
 
                 if (userName && bodyLower.includes(userName)) {
-                    breakdown.winner_page_name_match = 25;
+                    breakdown.winner_page_name_match = 24;
                     evidence.push(`User name found on winner/project page`);
                     await this.log(sid, 'winner_page_check', 'success', 'User name matched on winner page');
                 } else if (projectName && bodyLower.includes(projectName)) {
-                    breakdown.winner_page_name_match = 15;
+                    breakdown.winner_page_name_match = 16;
                     evidence.push(`Project name "${submission.metadata?.projectName}" found on winner page`);
                     await this.log(sid, 'winner_page_check', 'success', 'Project name matched on winner page');
                 } else {
@@ -151,7 +151,7 @@ export class HackathonVerifier extends BaseVerifier {
                 const textLower = text.toLowerCase();
                 const hackathonName = (submission.title || '').toLowerCase();
                 if (hackathonName && textLower.includes(hackathonName.split(' ')[0])) {
-                    breakdown.certificate_ocr_match = 15;
+                    breakdown.certificate_ocr_match = 17;
                     evidence.push('Hackathon name found in certificate text');
                     await this.log(sid, 'certificate_ocr', 'success', 'Hackathon name matched in OCR text');
                 } else {
