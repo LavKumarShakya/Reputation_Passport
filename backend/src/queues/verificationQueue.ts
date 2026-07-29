@@ -5,6 +5,8 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 const redisConfig: any = {
     maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+    keepAlive: 10000,
     ...(REDIS_URL.startsWith('rediss://') && {
         tls: { rejectUnauthorized: false },
         family: 0, // Prefer IPv4 if available

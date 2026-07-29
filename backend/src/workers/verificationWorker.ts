@@ -18,6 +18,8 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 export function startVerificationWorker(io: SocketServer): Worker {
     const redisConfig: any = {
         maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+        keepAlive: 10000,
         ...(REDIS_URL.startsWith('rediss://') && {
             tls: { rejectUnauthorized: false },
             family: 0,
