@@ -16,7 +16,14 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
  * @param io  Socket.io server instance for real-time push notifications
  */
 export function startVerificationWorker(io: SocketServer): Worker {
-    const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+    const redisConfig: any = {
+        maxRetriesPerRequest: null,
+        ...(REDIS_URL.startsWith('rediss://') && {
+            tls: { rejectUnauthorized: false },
+            family: 0,
+        }),
+    };
+    const connection = new IORedis(REDIS_URL, redisConfig);
 
     const worker = new Worker(
         'verification',

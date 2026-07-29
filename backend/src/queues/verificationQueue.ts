@@ -3,10 +3,16 @@ import IORedis from 'ioredis';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-// Shared Redis connection for BullMQ (maxRetriesPerRequest must be null for BullMQ)
-export const redisConnection = new IORedis(REDIS_URL, {
+const redisConfig: any = {
     maxRetriesPerRequest: null,
-});
+    ...(REDIS_URL.startsWith('rediss://') && {
+        tls: { rejectUnauthorized: false },
+        family: 0, // Prefer IPv4 if available
+    }),
+};
+
+// Shared Redis connection for BullMQ (maxRetriesPerRequest must be null for BullMQ)
+export const redisConnection = new IORedis(REDIS_URL, redisConfig);
 
 redisConnection.on('connect', () => console.log('✅ Redis connected'));
 redisConnection.on('error', (err) => console.error('❌ Redis error:', err.message));
@@ -27,7 +33,7 @@ export const verificationQueue = new Queue('verification', {
 
 // Queue event listener for logging
 export const verificationQueueEvents = new QueueEvents('verification', {
-    connection: new IORedis(REDIS_URL, { maxRetriesPerRequest: null }),
+    connection: new IORedis(REDIS_URL, redisConfig),
 });
 
 /**
