@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
 import { Server as SocketServer } from 'socket.io';
+import { createRedisClient } from '../config/redis';
 import UserSubmission from '../models/UserSubmission';
 import VerificationLog from '../models/VerificationLog';
 import User from '../models/User';
@@ -9,23 +9,12 @@ import { uploadToIPFS, cleanupTempFile } from '../services/ipfs';
 import { applyReputation, calculateReputationPoints } from '../services/reputationEngine';
 import { addCredentialOnChain } from '../services/blockchain';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-
 /**
  * Create and start the BullMQ verification worker.
  * @param io  Socket.io server instance for real-time push notifications
  */
 export function startVerificationWorker(io: SocketServer): Worker {
-    const redisConfig: any = {
-        maxRetriesPerRequest: null,
-        enableReadyCheck: false,
-        keepAlive: 10000,
-        ...(REDIS_URL.startsWith('rediss://') && {
-            tls: { rejectUnauthorized: false },
-            family: 0,
-        }),
-    };
-    const connection = new IORedis(REDIS_URL, redisConfig);
+    const connection = createRedisClient('QueueWorker');
 
     const worker = new Worker(
         'verification',

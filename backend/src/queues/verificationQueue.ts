@@ -1,23 +1,8 @@
 import { Queue, QueueEvents } from 'bullmq';
-import IORedis from 'ioredis';
+import { createRedisClient } from '../config/redis';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-
-const redisConfig: any = {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-    keepAlive: 10000,
-    ...(REDIS_URL.startsWith('rediss://') && {
-        tls: { rejectUnauthorized: false },
-        family: 0, // Prefer IPv4 if available
-    }),
-};
-
-// Shared Redis connection for BullMQ (maxRetriesPerRequest must be null for BullMQ)
-export const redisConnection = new IORedis(REDIS_URL, redisConfig);
-
-redisConnection.on('connect', () => console.log('✅ Redis connected'));
-redisConnection.on('error', (err) => console.error('❌ Redis error:', err.message));
+// Shared Redis connection for BullMQ
+export const redisConnection = createRedisClient('QueueProducer');
 
 // The verification queue
 export const verificationQueue = new Queue('verification', {
@@ -35,7 +20,7 @@ export const verificationQueue = new Queue('verification', {
 
 // Queue event listener for logging
 export const verificationQueueEvents = new QueueEvents('verification', {
-    connection: new IORedis(REDIS_URL, redisConfig),
+    connection: createRedisClient('QueueEvents'),
 });
 
 /**
