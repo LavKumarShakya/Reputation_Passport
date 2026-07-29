@@ -19,6 +19,7 @@ import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/AdminPage";
 import TestBlockchainPage from "./pages/TestBlockchainPage";
 import NotFound from "./pages/NotFound";
+import SubmitAchievementPage from "./pages/SubmitAchievementPage";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/test-blockchain" element={<TestBlockchainPage />} />
+            <Route path="/submit-achievement" element={<SubmitAchievementPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
