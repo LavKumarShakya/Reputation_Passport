@@ -125,17 +125,20 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 │                      │        │                      │        │                  │
 │  React 18 + TS       │        │  Express + TS        │        │  Solidity ^0.8.24│
 │  Vite 5              │ REST   │  MongoDB (Mongoose)  │ Ethers │  ERC-721 + SBT   │
-│  Tailwind + shadcn   │──────▶│  JWT + GitHub OAuth  │ ──────▶│  Whitelisted     │
-│  Framer Motion       │  API   │  SHA-256 Hashing     │  v6    │  Issuer Model    │
-│  Ethers.js v6        │        │  bcryptjs Auth       │        │  OpenZeppelin    │
+│  Tailwind + shadcn   │──────▶│  BullMQ + Redis      │ ──────▶│  Whitelisted     │
+│  Framer Motion       │  API   │  Pinata / IPFS       │  v6    │  Issuer Model    │
+│  Ethers.js v6        │        │  Verification Engine │        │  OpenZeppelin    │
+│  Socket.io           │        │  Tesseract.js OCR    │        │                  │
 │                      │        │                      │        │                  │
 │  Vercel (hosting)    │        │  Render (hosting)    │        │  Polygon Amoy    │
 └──────────────────────┘        └──────────┬───────────┘        └──────────────────┘
                                           │
                                 ┌─────────▼─────────┐
                                 │   MongoDB Atlas   │
-                                │   4 Collections   │
+                                │   Collections     │
                                 │   Users           │
+                                │   Submissions     │
+                                │   VerificationLogs│
                                 │   Credentials     │
                                 │   Issuers         │
                                 │   Achievements    │
@@ -143,7 +146,9 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 ```
 
 **Data Distribution:**
-- **Off-chain (MongoDB):** Full user profiles, raw credential metadata, certificate file data (base64), issuer registrations, achievements
+- **Off-chain (MongoDB):** Full user profiles, raw credential metadata, certificate file data, verification audit logs (`VerificationLog`), issuer registrations, achievements
+- **Queue & Async Processing (BullMQ + Redis):** Verification jobs queue, automated background verification worker, Socket.io push notifications
+- **Decentralized Storage (Pinata IPFS):** Only verified achievement certificates & metadata files pinned to IPFS
 - **On-chain (Polygon):** 32-byte credential hashes, issuer whitelist, user credential mappings, SBT tokens
 
 ---
@@ -163,6 +168,7 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 | **Axios** | 1.x | API communication |
 | **React Router** | v6 | Client-side routing |
 | **React Query** | v5 | Server state management |
+| **Socket.io-client** | 4.x | Real-time push updates for submission verification |
 | **Recharts** | 2.x | Data visualization charts |
 | **Lucide React** | — | Icon library |
 | **Sonner** | — | Toast notifications |
@@ -172,9 +178,15 @@ Each user receives a **Dynamic NFT Reputation Passport** — a 3D holographic ca
 | Technology | Version | Purpose |
 |---|---|---|
 | **Node.js** | 18+ | Runtime |
-| **Express** | 4.x | REST API server |
+| **Express** | 5.x | REST API server |
 | **TypeScript** | 5.x | Type safety |
-| **MongoDB** (Mongoose) | — | User, credential, issuer, achievement storage |
+| **BullMQ** | 5.x | Background job queue for verification workers |
+| **ioredis** | 5.x | Redis client with TLS & auto-reconnect |
+| **Tesseract.js** | 7.x | OCR text parsing for uploaded certificates |
+| **pdf-parse** | 2.x | PDF document text extraction |
+| **Pinata SDK / Axios** | — | IPFS pinning for verified credentials |
+| **Socket.io** | 4.x | Real-time WebSocket notifications |
+| **MongoDB** (Mongoose) | — | User, submission, log, issuer, achievement storage |
 | **JWT** (jsonwebtoken) | — | Stateless authentication (7-day expiry) |
 | **bcryptjs** | — | Password hashing (12 salt rounds) |
 | **Ethers.js** | v6 | On-chain credential writes |
@@ -488,6 +500,9 @@ Creates **5 test users** (one per reputation tier), sample issuers, and credenti
 | `PORT` | Server port | `5000` |
 | `NODE_ENV` | Environment mode | `development` / `production` |
 | `MONGODB_URI` | MongoDB connection string | `mongodb+srv://...` |
+| `REDIS_URL` | Redis URL for BullMQ job queue | `redis://localhost:6379` or `rediss://...` |
+| `PINATA_API_KEY` | Pinata API Key for IPFS upload | `your_pinata_api_key` |
+| `PINATA_SECRET_KEY` | Pinata API Secret for IPFS upload | `your_pinata_secret_key` |
 | `JWT_SECRET` | Secret for signing JWTs | `openssl rand -hex 32` |
 | `JWT_EXPIRES_IN` | Token expiry duration | `7d` |
 | `PRIVATE_KEY` | Wallet private key for on-chain writes | `0x...` |
@@ -495,7 +510,7 @@ Creates **5 test users** (one per reputation tier), sample issuers, and credenti
 | `POLYGON_AMOY_RPC_URL` | Polygon RPC endpoint | `https://rpc-amoy.polygon.technology` |
 | `GITHUB_CLIENT_ID` | GitHub OAuth app client ID | From GitHub Developer Settings |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth app client secret | From GitHub Developer Settings |
-| `FRONTEND_URL` | Frontend origin (for CORS) | `http://localhost:8080` |
+| `FRONTEND_URL` | Frontend origin (for CORS & WebSockets) | `http://localhost:8080` |
 | `BACKEND_URL` | Backend URL | `http://localhost:5000` |
 
 ### Frontend (`.env.local`)
