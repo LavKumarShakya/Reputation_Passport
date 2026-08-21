@@ -27,12 +27,21 @@ doc
 # Environment files
 .env
 .env.*
+backend/.env
+backend/.env.*
 
 .agent
 steps.md
 desc.md
+h.txt
+ui.txt
+check_db.js
 
+backend/build_errors.txt
+backend/err.txt
 blockchain/compile_error.txt
 blockchain/out.txt
 presnopsis.md
+
+Synopsis
 
