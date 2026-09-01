@@ -7,6 +7,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import UserSubmission, { SubmissionType } from '../models/UserSubmission';
 import VerificationLog from '../models/VerificationLog';
 import { enqueueVerification } from '../queues/verificationQueue';
+import { revokeReputation } from '../services/reputationEngine';
 
 const router = Router();
 
@@ -278,8 +279,7 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
         }
 
         if (submission.status === 'verified') {
-            res.status(400).json({ error: 'Verified submissions cannot be deleted' });
-            return;
+            await revokeReputation(req.userId as string, submission);
         }
 
         // Clean up temp file

@@ -2,6 +2,7 @@ import express, { Router, Request, Response } from 'express';
 import User from '../models/User';
 import bcrypt from 'bcryptjs';
 import Credential from '../models/Credential';
+import UserSubmission from '../models/UserSubmission';
 import Achievement from '../models/Achievement';
 import axios from 'axios';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -89,18 +90,35 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         }
 
         const credentials = await Credential.find({ userWallet: user.walletAddress });
+        const verifiedSubmissions = await UserSubmission.find({ userId: user._id, status: 'verified' });
+
+        const mappedCredentials = credentials.map(c => ({
+            id: c._id,
+            category: c.category,
+            data: c.data,
+            hash: c.hash,
+            verified: c.verified,
+            txHash: c.txHash,
+            issuedAt: c.issuedAt,
+        }));
+
+        const mappedSubmissions = verifiedSubmissions.map(s => ({
+            id: s._id,
+            category: s.type,
+            data: {
+                name: s.title,
+                issuerName: s.issuer,
+                verifiableLink: s.verificationUrl,
+            },
+            hash: s.ipfsHash || '',
+            verified: true,
+            txHash: s.metadata?.txHash || '',
+            issuedAt: s.createdAt,
+        }));
 
         res.json({
             user,
-            credentials: credentials.map(c => ({
-                id: c._id,
-                category: c.category,
-                data: c.data,
-                hash: c.hash,
-                verified: c.verified,
-                txHash: c.txHash,
-                issuedAt: c.issuedAt,
-            })),
+            credentials: [...mappedCredentials, ...mappedSubmissions],
         });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch profile' });
@@ -135,18 +153,35 @@ router.get('/:id', async (req: Request, res: Response) => {
         }
 
         const credentials = await Credential.find({ userWallet: user.walletAddress });
+        const verifiedSubmissions = await UserSubmission.find({ userId: user._id, status: 'verified' });
+
+        const mappedCredentials = credentials.map(c => ({
+            id: c._id,
+            category: c.category,
+            data: c.data,
+            hash: c.hash,
+            verified: c.verified,
+            txHash: c.txHash,
+            issuedAt: c.issuedAt,
+        }));
+
+        const mappedSubmissions = verifiedSubmissions.map(s => ({
+            id: s._id,
+            category: s.type,
+            data: {
+                name: s.title,
+                issuerName: s.issuer,
+                verifiableLink: s.verificationUrl,
+            },
+            hash: s.ipfsHash || '',
+            verified: true,
+            txHash: s.metadata?.txHash || '',
+            issuedAt: s.createdAt,
+        }));
 
         res.json({
             user,
-            credentials: credentials.map(c => ({
-                id: c._id,
-                category: c.category,
-                data: c.data,
-                hash: c.hash,
-                verified: c.verified,
-                txHash: c.txHash,
-                issuedAt: c.issuedAt,
-            })),
+            credentials: [...mappedCredentials, ...mappedSubmissions],
         });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch profile' });

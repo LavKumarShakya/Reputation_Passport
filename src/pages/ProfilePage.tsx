@@ -47,9 +47,9 @@ export default function ProfilePage() {
     walletAddress: '',
   };
 
-  const { achievements } = useAchievements(userToDisplay._id || userToDisplay.id || '');
+  const { data: achievements = [], isPending: badgesLoading } = useAchievements(userToDisplay._id || userToDisplay.id || '');
 
-  if (isLoading) {
+  if (isLoading || badgesLoading) {
     return (
       <AppLayout>
         <div className="flex h-[80vh] items-center justify-center">
@@ -279,7 +279,7 @@ export default function ProfilePage() {
                       <span className="font-mono text-[10px] bg-background border px-1.5 py-0.5 text-muted-foreground">PROOFS</span>
                     </div>
                     <p className="font-heading text-4xl font-bold tracking-tighter text-foreground mb-1">
-                      {profile?.credentials?.length || 0}
+                      {profile?.credentials?.filter((c: any) => c.verified).length || 0}
                     </p>
                     <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Credentials</p>
                   </div>
@@ -290,7 +290,7 @@ export default function ProfilePage() {
                       <span className="font-mono text-[10px] bg-background border px-1.5 py-0.5 text-muted-foreground">TX</span>
                     </div>
                     <p className="font-heading text-4xl font-bold tracking-tighter text-foreground mb-1">
-                      {profile?.credentials?.filter((c: any) => c.txHash)?.length || 0}
+                      {profile?.credentials?.filter((c: any) => c.verified && c.txHash)?.length || 0}
                     </p>
                     <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">On-Chain Links</p>
                   </div>
@@ -351,7 +351,7 @@ export default function ProfilePage() {
                     <h2 className="font-heading text-2xl font-bold uppercase tracking-wider">Event Log</h2>
                   </div>
                   <div className="border border-border bg-secondary/5 p-6">
-                    <Timeline credentials={profile?.credentials} />
+                    <Timeline credentials={profile?.credentials?.filter((c: any) => c.verified)} />
                   </div>
                 </section>
               </div>

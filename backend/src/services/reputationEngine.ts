@@ -12,12 +12,11 @@ const BASE_POINTS: Record<string, number> = {
     competition: 50,
 };
 
-// Tier thresholds
 const TIER_THRESHOLDS: Array<{ min: number; tier: string }> = [
-    { min: 1000, tier: 'diamond' },
-    { min: 600,  tier: 'platinum' },
-    { min: 300,  tier: 'gold' },
-    { min: 100,  tier: 'silver' },
+    { min: 900,  tier: 'diamond' },
+    { min: 700,  tier: 'platinum' },
+    { min: 500,  tier: 'gold' },
+    { min: 300,  tier: 'silver' },
     { min: 0,    tier: 'bronze' },
 ];
 
@@ -64,4 +63,43 @@ export async function applyReputation(
     );
 
     return { pointsAwarded: points, newScore: user.reputationScore, newTier };
+}
+
+/**
+ * Revoke reputation points from a user (e.g., when a verified submission is deleted) and recalculate their tier.
+ */
+export async function revokeReputation(
+    userId: string,
+    submission: IUserSubmission
+): Promise<{ pointsRevoked: number; newScore: number; newTier: string }> {
+    const points = submission.reputationPoints || calculateReputationPoints(submission);
+    
+    // Make sure score doesn't drop below zero
+    const userToUpdate = await User.findById(userId);
+    if (!userToUpdate) throw new Error(`User ${userId} not found when revoking reputation`);
+
+    const newScoreRaw = userToUpdate.reputationScore - points;
+    const finalScore = Math.max(0, newScoreRaw);
+
+    const user = await User.findByIdAndUpdate(
+        userId,
+        { reputationScore: finalScore },
+        { new: true }
+    );
+
+    if (!user) throw new Error(`User ${userId} not found when revoking reputation (update phase)`);
+
+    // Recalculate tier based on new score
+    const newTier = TIER_THRESHOLDS.find(t => user.reputationScore >= t.min)?.tier ?? 'bronze';
+
+    if (user.tier !== newTier) {
+        await User.findByIdAndUpdate(userId, { tier: newTier });
+        user.tier = newTier as any;
+    }
+
+    console.log(
+        `[ReputationEngine] User ${userId}: -${points} pts → ${user.reputationScore} total (${newTier})`
+    );
+
+    return { pointsRevoked: points, newScore: user.reputationScore, newTier };
 }

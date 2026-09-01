@@ -1,8 +1,8 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, Crosshair, CheckCircle2, Clock, XCircle, RefreshCw, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShieldAlert, Crosshair, CheckCircle2, Clock, XCircle, RefreshCw, Edit2, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useResubmit } from '@/hooks/useSubmissions';
+import { useResubmit, useDeleteSubmission } from '@/hooks/useSubmissions';
 
 type SubmissionStatus = 'pending' | 'processing' | 'verified' | 'rejected' | 'temp_failed';
 
@@ -41,6 +41,8 @@ const rarityColors: Record<string, { bg: string; border: string; text: string; f
 
 // ── Pending card ──────────────────────────────────────────────────────────────
 function PendingCard({ achievement }: { achievement: AchievementData }) {
+  const { mutate: deleteSubmission, isPending: isDeleting } = useDeleteSubmission();
+
   return (
     <div className="relative overflow-hidden border border-border/50 bg-secondary/5 p-5">
       {/* Blur overlay */}
@@ -58,6 +60,16 @@ function PendingCard({ achievement }: { achievement: AchievementData }) {
           <p className="font-mono text-[10px] text-muted-foreground mt-1 uppercase">
             Submitted {new Date(achievement.earnedAt || Date.now()).toLocaleDateString()}
           </p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-4 text-muted-foreground hover:text-red-400 font-mono text-[10px] uppercase tracking-widest h-8"
+            onClick={() => deleteSubmission(achievement.id)}
+            disabled={isDeleting}
+          >
+            <Trash2 className={cn('mr-1.5 h-3 w-3', isDeleting && 'animate-pulse')} />
+            Delete
+          </Button>
         </div>
       </div>
 
@@ -119,6 +131,7 @@ function ConfidenceBreakdown({ breakdown }: { breakdown: Record<string, number> 
 // ── Rejected card ─────────────────────────────────────────────────────────────
 function RejectedCard({ achievement, onResubmit }: { achievement: AchievementData; onResubmit?: () => void }) {
   const { mutate: resubmit, isPending } = useResubmit(achievement.id);
+  const { mutate: deleteSubmission, isPending: isDeleting } = useDeleteSubmission();
 
   return (
     <div className="relative overflow-hidden border border-red-500/30 bg-secondary/5 p-5 opacity-75">
@@ -194,13 +207,24 @@ function RejectedCard({ achievement, onResubmit }: { achievement: AchievementDat
           <RefreshCw className={cn('mr-1.5 h-3 w-3', isPending && 'animate-spin')} />
           Resubmit
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-9 shrink-0 rounded-none h-9 border-border/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30"
+          onClick={() => deleteSubmission(achievement.id)}
+          disabled={isDeleting}
+          title="Delete submission"
+        >
+          <Trash2 className={cn('h-4 w-4', isDeleting && 'animate-pulse')} />
+        </Button>
       </div>
     </div>
   );
 }
 
 // ── Verified card ─────────────────────────────────────────────────────────────
-function VerifiedCard({ achievement }: { achievement: AchievementData }) {
+function VerifiedCard({ achievement, isSubmission }: { achievement: AchievementData, isSubmission?: boolean }) {
+  const { mutate: deleteSubmission, isPending: isDeleting } = useDeleteSubmission();
   const colors = rarityColors[achievement.rarity || 'common'];
   const progress = ((achievement.progress ?? 1) / (achievement.maxProgress ?? 1)) * 100;
 
@@ -291,8 +315,22 @@ function VerifiedCard({ achievement }: { achievement: AchievementData }) {
                   }
                 </span>
               </div>
-              <div className="bg-accent/10 border border-accent/20 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest text-accent flex items-center gap-2">
-                RESOLVED
+              <div className="flex items-center gap-2">
+                <div className="bg-accent/10 border border-accent/20 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest text-accent flex items-center gap-2">
+                  RESOLVED
+                </div>
+                {isSubmission && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-8 h-8 p-0 shrink-0 rounded-none border-border/50 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 ml-2"
+                    onClick={() => deleteSubmission(achievement.id)}
+                    disabled={isDeleting}
+                    title="Delete submission"
+                  >
+                    <Trash2 className={cn('h-3.5 w-3.5', isDeleting && 'animate-pulse')} />
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -319,9 +357,9 @@ export function AchievementBadge({ achievement, isSubmission = false, onEdit }: 
       return <RejectedCard achievement={achievement} onResubmit={onEdit} />;
     }
     // Verified submission — falls through to VerifiedCard below
-    return <VerifiedCard achievement={achievement} />;
+    return <VerifiedCard achievement={achievement} isSubmission={true} />;
   }
 
   // Gamification badge (existing behaviour)
-  return <VerifiedCard achievement={achievement} />;
+  return <VerifiedCard achievement={achievement} isSubmission={false} />;
 }

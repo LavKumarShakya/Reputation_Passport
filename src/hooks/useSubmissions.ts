@@ -104,6 +104,8 @@ export function useDeleteSubmission() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['achievements'] });
     },
   });
 }

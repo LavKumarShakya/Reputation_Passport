@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { io, Socket } from 'socket.io-client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 const BACKEND_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -26,6 +27,7 @@ interface SubmissionUpdatePayload {
 export function useVerificationSocket(isAuthenticated: boolean) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -72,8 +74,17 @@ export function useVerificationSocket(isAuthenticated: boolean) {
       queryClient.invalidateQueries({ queryKey: ['submissions'] });
 
       // Also refresh user data if reputation changed
-      if (data.status === 'verified' && data.reputationPoints) {
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
+      if (data.status === 'verified') {
+        if (data.reputationPoints) {
+          queryClient.invalidateQueries({ queryKey: ['profile'] });
+        }
+        
+        // Invalidate achievements since a new one might have been granted (e.g. Genesis Node)
+        if (user?.id) {
+          queryClient.invalidateQueries({ queryKey: ['achievements', user.id] });
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['achievements'] });
+        }
       }
 
       // Show toast notification

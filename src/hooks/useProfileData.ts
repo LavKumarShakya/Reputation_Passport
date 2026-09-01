@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 export function useProfile(walletOrHandle: string) {
@@ -82,27 +83,13 @@ export function useIssuerCredentials(walletAddress: string) {
 }
 
 export function useAchievements(userId: string) {
-    const [achievements, setAchievements] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        async function load() {
-            if (!userId) {
-                setIsLoading(false);
-                return;
-            }
-            setIsLoading(true);
-            try {
-                const response = await api.get(`/achievements/${userId}`);
-                setAchievements(response.data);
-            } catch (err) {
-                console.error('Failed to fetch achievements', err);
-            } finally {
-                setIsLoading(false);
-            }
-        }
-        load();
-    }, [userId]);
-
-    return { achievements, isLoading };
+    return useQuery({
+        queryKey: ['achievements', userId],
+        queryFn: async () => {
+            const res = await api.get(`/achievements/${userId}`);
+            return res.data as any[];
+        },
+        enabled: !!userId,
+        staleTime: 5 * 60 * 1000,
+    });
 }

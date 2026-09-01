@@ -21,7 +21,14 @@ import TestBlockchainPage from "./pages/TestBlockchainPage";
 import NotFound from "./pages/NotFound";
 import SubmitAchievementPage from "./pages/SubmitAchievementPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem>

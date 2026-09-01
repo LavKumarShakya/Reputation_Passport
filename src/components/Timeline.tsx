@@ -67,7 +67,7 @@ function TimelineItem({ event, index }: TimelineItemProps) {
               )}
             </div>
 
-            <h4 className="font-heading text-lg font-semibold">{event.data?.courseName || event.data?.projectName || event.category}</h4>
+            <h4 className="font-heading text-lg font-semibold">{event.data?.title || event.data?.name || event.data?.courseName || event.data?.projectName || event.category}</h4>
             <p className="mt-1 text-sm text-muted-foreground">{event.data?.description || 'Verified credential on-chain'}</p>
 
             {event.issuerWallet && (

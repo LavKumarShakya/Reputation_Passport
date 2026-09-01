@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AchievementBadge } from '@/components/AchievementBadge';
 import { useAuth } from '@/hooks/useAuth';
-import { useAchievements } from '@/hooks/useProfileData';
+import { useProfile, useAchievements } from '@/hooks/useProfileData';
 import { useSubmissions } from '@/hooks/useSubmissions';
 import { useVerificationSocket } from '@/hooks/useVerificationSocket';
 import { Target, Search, Filter, Loader2, Plus, Clock, CheckCircle2, XCircle } from 'lucide-react';
@@ -15,12 +15,15 @@ type TabId = 'badges' | 'submissions';
 
 export default function AchievementsPage() {
   const { user, isAuthenticated } = useAuth();
+  const { data: profile } = useProfile(user?.id || '');
+  const displayUser = profile?.user || user;
+
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>('badges');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Gamification achievements
-  const { achievements: rawAchievements, isLoading: badgesLoading } = useAchievements(user?.id || '');
+  const { data: rawAchievements = [], isPending: badgesLoading } = useAchievements(user?.id || '');
   const achievements = rawAchievements.map(a => ({
     ...a,
     claimed: true,
@@ -29,12 +32,21 @@ export default function AchievementsPage() {
   }));
 
   // User-submitted achievements (verification pipeline)
-  const { data: submissions = [], isLoading: submissionsLoading } = useSubmissions();
+  const { data: submissions = [], isPending: submissionsLoading } = useSubmissions();
 
   // Real-time socket updates — no polling
   useVerificationSocket(isAuthenticated);
 
   const isLoading = badgesLoading || submissionsLoading;
+  
+  console.log('[DEBUG] AchievementsPage render:', {
+    userId: user?.id,
+    badgesLoading,
+    submissionsLoading,
+    isLoading,
+    rawAchievementsLength: rawAchievements.length,
+    submissionsLength: submissions.length,
+  });
 
   // Stats
   const verifiedCount = submissions.filter(s => s.status === 'verified').length;
@@ -101,7 +113,7 @@ export default function AchievementsPage() {
               { label: 'Earned Badges',       value: achievements.length },
               { label: 'Verified Achievements', value: verifiedCount, color: 'text-green-400' },
               { label: 'Pending Review',        value: pendingCount,  color: 'text-yellow-400' },
-              { label: 'Total Reputation',      value: user?.reputationScore ?? 0, color: 'text-primary' },
+              { label: 'Total Reputation',      value: displayUser?.reputationScore ?? 0, color: 'text-primary' },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
