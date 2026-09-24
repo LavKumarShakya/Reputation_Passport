@@ -125,6 +125,7 @@ export default function AuthPage() {
       desc: 'Cryptographic proof via Web3 provider',
       icon: Wallet,
       imports: ['Address', 'ENS', 'On-chain History'],
+      working: false,
     },
     {
       id: 'github' as const,
@@ -132,6 +133,7 @@ export default function AuthPage() {
       desc: 'Import developer reputation vectors',
       icon: Github,
       imports: ['Repositories', 'Commits', 'PRs'],
+      working: true,
     },
     {
       id: 'google' as const,
@@ -139,6 +141,7 @@ export default function AuthPage() {
       desc: 'Anchor fundamental identity layer',
       icon: Mail,
       imports: ['Email', 'Profile', 'Certs'],
+      working: false,
     },
     {
       id: 'credentials' as const,
@@ -146,6 +149,7 @@ export default function AuthPage() {
       desc: 'Direct access via handle & password',
       icon: Shield,
       imports: ['Username', 'Email', 'Local Password'],
+      working: false,
     },
   ];
 
@@ -249,6 +253,7 @@ export default function AuthPage() {
                 >
                   <div
                     onClick={() => {
+                      if (!method.working) return;
                       if (method.id === 'credentials') {
                         setSelectedMethod(selectedMethod === 'credentials' ? null : 'credentials');
                       } else {
@@ -256,7 +261,8 @@ export default function AuthPage() {
                       }
                     }}
                     className={cn(
-                      "group w-full text-left relative overflow-hidden cursor-pointer",
+                      "group w-full text-left relative overflow-hidden",
+                      method.working ? "cursor-pointer" : "cursor-not-allowed opacity-60",
                       isLoading && selectedMethod !== method.id && "opacity-50 pointer-events-none"
                     )}
                   >
@@ -281,10 +287,19 @@ export default function AuthPage() {
                           </div>
 
                           <div>
-                            <h3 className={cn(
-                              "font-heading text-xl font-bold uppercase tracking-wide transition-colors",
-                              selectedMethod === method.id ? "text-primary" : "group-hover:text-primary"
-                            )}>{method.title}</h3>
+                            <div className="flex items-center gap-3">
+                              <h3 className={cn(
+                                "font-heading text-xl font-bold uppercase tracking-wide transition-colors",
+                                method.working
+                                  ? selectedMethod === method.id ? "text-primary" : "group-hover:text-primary"
+                                  : "text-muted-foreground"
+                              )}>{method.title}</h3>
+                              {!method.working && (
+                                <span className="font-mono text-[9px] uppercase tracking-widest border border-muted-foreground/30 text-muted-foreground/60 px-1.5 py-0.5">
+                                  Not available
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground font-medium mt-1">{method.desc}</p>
                           </div>
                         </div>

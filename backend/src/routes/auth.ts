@@ -394,11 +394,6 @@ router.get('/github/callback', async (req: Request, res: Response) => {
 // POST /api/auth/mock-wallet — Dev-only: login with just a wallet address (no signature)
 router.post('/mock-wallet', async (req: Request, res: Response) => {
     try {
-        if (process.env.NODE_ENV === 'production') {
-            res.status(403).json({ error: 'Mock login disabled in production' });
-            return;
-        }
-
         const { walletAddress } = req.body;
         if (!walletAddress) {
             res.status(400).json({ error: 'walletAddress is required' });
